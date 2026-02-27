@@ -25,7 +25,12 @@
                 <form id="dynamicForm" action="/preview/{{ form.form_id }}" method="POST">
                     {% for field in form.fields %}
                     <div class="mb-3">
-                        <label class="form-label">{{ field.label }}</label>
+                        <label class="form-label">
+                            {{ field.label }}
+                            {% if field.required %}
+                            <span class="text-danger">*</span>
+                            {% endif %}
+                        </label>
                         
                         {% if field.type == 'text' %}
                         <input type="text" 
@@ -45,7 +50,7 @@
                         {% elif field.type == 'signature' %}
                         <canvas id="signature-pad" class="signature-pad" style="height: {{ field.height }}"></canvas>
                         <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear">Löschen</button>
-                        <input type="hidden" name="{{ field.name }}" id="signature64" value="{{ data.get(field.name, '') }}">
+                        <input type="hidden" name="{{ field.name }}" id="signature64" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
                         {% endif %}
                     </div>
                     {% endfor %}
@@ -83,13 +88,17 @@
             });
 
             document.getElementById('dynamicForm').addEventListener('submit', (e) => {
-                if (signaturePad.isEmpty() && !document.getElementById('signature64').value) {
+                // Prüfen, ob das Unterschriftsfeld ein Pflichtfeld ist
+                const signatureField = document.getElementById('signature64');
+                const isSignatureRequired = signatureField && signatureField.hasAttribute('required');
+
+                if (isSignatureRequired && signaturePad.isEmpty() && !signatureField.value) {
                     e.preventDefault();
                     alert("Bitte unterschreiben!");
                 } else {
                     // Nur aktualisieren, wenn neu unterschrieben wurde
                     if (!signaturePad.isEmpty()) {
-                        document.getElementById('signature64').value = signaturePad.toDataURL();
+                        signatureField.value = signaturePad.toDataURL();
                     }
                 }
             });

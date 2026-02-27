@@ -6,7 +6,7 @@ fields:
   - type: text
     name: name
     label: Name
-    required: true
+    required: false
     placeholder: Dein Name
 
   - type: text
