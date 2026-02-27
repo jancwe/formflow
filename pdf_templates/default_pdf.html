@@ -5,90 +5,159 @@
     <style>
         @page {
             size: A4;
-            margin: 2cm;
-            @top-right {
+            margin: 2.5cm 2cm 3cm 2cm;
+            @top-center {
+                content: "";
+            }
+            @bottom-center {
                 content: "Seite " counter(page) " von " counter(pages);
-                font-size: 10pt;
-                color: #666;
+                font-size: 9pt;
+                color: #888;
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             }
         }
+        
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #333;
             line-height: 1.6;
+            background-color: #fff;
         }
+
+        /* Header Styling */
         .header {
-            border-bottom: 2px solid #0056b3;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
+            border-bottom: 3px solid {{ config.colors.primary | default('#0056b3') }};
+            padding-bottom: 15px;
+            margin-bottom: 40px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-end;
         }
+
         .logo {
-            font-size: 24pt;
-            font-weight: bold;
-            color: #0056b3;
+            width: 220px;
         }
+        
+        .logo img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .header-meta {
+            text-align: right;
+            font-size: 10pt;
+            color: {{ config.colors.text_light | default('#666') }};
+        }
+
+        /* Typografie */
         h1 {
-            font-size: 20pt;
-            color: #0056b3;
+            font-size: 24pt;
+            color: {{ config.colors.text_dark | default('#333') }};
             margin-top: 0;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 800;
         }
+
+        /* Tabellen-Styling */
         .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            background-color: {{ config.colors.bg_light | default('#fdfdfd') }};
         }
+
         .info-table th, .info-table td {
-            padding: 12px;
+            padding: 15px;
             border-bottom: 1px solid #eee;
             text-align: left;
+            vertical-align: top;
         }
+
         .info-table th {
-            width: 30%;
-            color: #666;
-            font-weight: normal;
+            width: 35%;
+            color: {{ config.colors.text_light | default('#666') }};
+            font-weight: 600;
+            background-color: {{ config.colors.bg_gray | default('#f8f8f8') }};
+            border-right: 1px solid #eee;
         }
+
         .info-table td {
-            font-weight: bold;
+            font-weight: normal;
+            color: #333;
         }
+
+        /* Unterschriften-Bereich */
         .signature-section {
             margin-top: 50px;
             page-break-inside: avoid;
+            background-color: {{ config.colors.bg_light | default('#fdfdfd') }};
+            padding: 20px;
+            border-radius: 4px;
+            border: 1px solid #eee;
         }
+
+        .signature-label {
+            font-weight: 600;
+            color: {{ config.colors.text_dark | default('#333') }};
+            margin-bottom: 15px;
+            font-size: 12pt;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
         .signature-box {
-            border: 1px solid #ccc;
-            padding: 10px;
-            width: 300px;
+            border: 2px dashed #d5d5d5;
+            background-color: #fff;
+            width: 100%;
             height: 150px;
-            /* Flexbox wird von WeasyPrint nicht immer perfekt für Bilder unterstützt */
             text-align: center;
             position: relative;
+            margin-bottom: 15px;
         }
+
         .signature-img {
-            /* Absolute Positionierung für robuste Darstellung in WeasyPrint */
-            max-width: 280px;
+            max-width: 90%;
             max-height: 130px;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
         }
-        .footer {
-            margin-top: 50px;
+
+        .signature-meta {
             font-size: 9pt;
+            color: {{ config.colors.text_light | default('#666') }};
+            margin-top: 10px;
+            text-align: right;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 60px;
+            font-size: 8pt;
             color: #999;
             text-align: center;
             border-top: 1px solid #eee;
-            padding-top: 10px;
+            padding-top: 15px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="logo">Unternehmenslogo</div>
-        <div>Datum: {{ date_today }}</div>
+        <div class="logo">
+            <!-- Logo aus Config laden -->
+            {% if config.company and config.company.logo_filename %}
+            <img src="file:///app/static/{{ config.company.logo_filename }}" alt="{{ config.company.name | default('Logo') }}">
+            {% endif %}
+        </div>
+        <div class="header-meta">
+            <strong>Datum:</strong> {{ date_today }}<br>
+            <strong>Dokument-ID:</strong> {{ uuid[:8] | upper }}
+        </div>
     </div>
 
     <h1>{{ form_title }}</h1>
@@ -98,7 +167,13 @@
             {% if field.type != 'signature' %}
             <tr>
                 <th>{{ field.label }}</th>
-                <td>{{ form_data.get(field.name, '') }}</td>
+                <td>
+                    {% if form_data.get(field.name) %}
+                        {{ form_data.get(field.name) }}
+                    {% else %}
+                        <span style="color: #ccc; font-style: italic;">Nicht angegeben</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endif %}
         {% endfor %}
@@ -107,23 +182,26 @@
     {% for field in fields %}
         {% if field.type == 'signature' %}
         <div class="signature-section">
-            <p><strong>{{ field.label }}:</strong></p>
+            <div class="signature-label">{{ field.label }}</div>
             <div class="signature-box">
                 {% if form_data.get(field.name) %}
                     <img src="{{ form_data.get(field.name) }}" class="signature-img" alt="Unterschrift">
                 {% else %}
-                    <span style="color: #ccc;">Keine Unterschrift</span>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ccc; font-style: italic;">
+                        Keine Unterschrift vorhanden
+                    </div>
                 {% endif %}
             </div>
-            <p style="font-size: 10pt; color: #666; margin-top: 5px;">
-                Unterzeichnet von: {{ form_data.get('user', 'Unbekannt') }} am {{ date_today }}
-            </p>
+            <div class="signature-meta">
+                Digital unterzeichnet von <strong>{{ form_data.get('user', 'Unbekannt') }}</strong> am {{ date_today }}
+            </div>
         </div>
         {% endif %}
     {% endfor %}
 
     <div class="footer">
-        Dieses Dokument wurde maschinell erstellt und ist mit der digitalen Unterschrift gültig.
+        Dieses Dokument wurde maschinell erstellt und ist in Verbindung mit der digitalen Unterschrift rechtsgültig.<br>
+        {{ config.company.name | default('Musterfirma') }} &bull; {{ config.company.address | default('Musterstraße 1 &bull; 12345 Musterstadt') | safe }}
     </div>
 </body>
 </html>

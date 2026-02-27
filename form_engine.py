@@ -13,13 +13,28 @@ from pdf_generator import PdfGenerator
 logger = logging.getLogger(__name__)
 
 class FormEngine:
-    def __init__(self, app: Flask, forms_dir: str = 'forms'):
+    def __init__(self, app: Flask, forms_dir: str = 'forms', config_file: str = 'config.yaml'):
         self.app = app
         self.forms_dir = forms_dir
+        self.config_file = config_file
         self.forms: Dict[str, Any] = {}
+        self.config: Dict[str, Any] = {}
         self.pdf_generator = PdfGenerator()
+        self._load_config()
         self._load_forms()
         self._register_routes()
+        
+    def _load_config(self) -> None:
+        """Lädt die globale Konfiguration (z.B. CI-Farben, Firmenname)"""
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, 'r', encoding='utf-8') as file:
+                    self.config = yaml.safe_load(file) or {}
+                logger.info(f"Konfiguration aus {self.config_file} geladen.")
+            except Exception as e:
+                logger.error(f"Fehler beim Laden der Konfiguration: {str(e)}")
+        else:
+            logger.warning(f"Konfigurationsdatei {self.config_file} nicht gefunden. Verwende Standardwerte.")
     
     def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""
@@ -54,7 +69,7 @@ class FormEngine:
             """Zeigt eine Liste aller verfügbaren Formulare an"""
             # Formulare neu laden, um Änderungen zu erkennen
             self._load_forms()
-            return render_template('form_list.html', forms=self.forms)
+            return render_template('form_list.html', forms=self.forms, app_config=self.config)
         
         @self.app.route('/form/<form_id>', methods=['GET', 'POST'])
         def show_form(form_id: str):
@@ -76,7 +91,8 @@ class FormEngine:
             return render_template('dynamic_form.html', 
                                   form=form_def, 
                                   data=data, 
-                                  date_today=date.today().isoformat())
+                                  date_today=date.today().isoformat(),
+                                  app_config=self.config)
         
         @self.app.route('/preview/<form_id>', methods=['POST'])
         def preview_form(form_id: str):
@@ -101,12 +117,13 @@ class FormEngine:
             # PDF generieren
             file_id = uuid.uuid4().hex
             temp_filename = f"pdfs/temp_{file_id}.pdf"
-            self.pdf_generator.generate(form_def, form_data, temp_filename)
+            self.pdf_generator.generate(form_def, form_data, temp_filename, self.config)
             
             return render_template('preview.html',
                                   uuid=file_id,
                                   form_id=form_id,
-                                  form_data=form_data)
+                                  form_data=form_data,
+                                  app_config=self.config)
         
         @self.app.route('/confirm/<form_id>/<file_id>', methods=['POST'])
         def confirm_form(form_id: str, file_id: str):
@@ -141,7 +158,7 @@ class FormEngine:
             
             if os.path.exists(temp_filename):
                 os.rename(temp_filename, final_filename)
-                return render_template('success.html')
+                return render_template('success.html', app_config=self.config)
             
             return "Fehler: Temporäre Datei nicht gefunden.", 400
         

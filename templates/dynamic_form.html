@@ -1,101 +1,102 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ form.title }}</title>
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-    <script src="{{ url_for('static', filename='js/signature_pad.umd.min.js') }}"></script>
-    <style>
-        .signature-pad { border: 2px dashed #ccc; border-radius: 5px; width: 100%; touch-action: none; }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="container mt-5" style="max-width: 600px;">
-        <div class="mb-3">
-            <a href="/" class="btn btn-outline-secondary">&larr; Zurück zur Übersicht</a>
-        </div>
-        <div class="card shadow">
-            <div class="card-body">
-                <h3 class="card-title mb-4">{{ form.title }}</h3>
-                {% if form.description %}
-                <p class="text-muted mb-4">{{ form.description }}</p>
-                {% endif %}
-                
-                <form id="dynamicForm" action="/preview/{{ form.form_id }}" method="POST">
-                    {% for field in form.fields %}
-                    <div class="mb-3">
-                        <label class="form-label">
-                            {{ field.label }}
-                            {% if field.required %}
-                            <span class="text-danger">*</span>
-                            {% endif %}
-                        </label>
-                        
-                        {% if field.type == 'text' %}
-                        <input type="text" 
-                               class="form-control" 
-                               name="{{ field.name }}" 
-                               value="{{ data.get(field.name, '') }}" 
-                               placeholder="{{ field.placeholder }}"
-                               {% if field.required %}required{% endif %}>
-                        
-                        {% elif field.type == 'date' %}
-                        <input type="date" 
-                               class="form-control" 
-                               name="{{ field.name }}" 
-                               value="{{ data.get(field.name, '') or field.default_value }}"
-                               {% if field.required %}required{% endif %}>
-                        
-                        {% elif field.type == 'select' %}
-                            {% if field.multiple %}
-                                <!-- Mehrfachauswahl als Checkboxes -->
-                                <div class="mt-2">
-                                {% for option in field.options %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" 
-                                               type="checkbox" 
-                                               name="{{ field.name }}" 
-                                               value="{{ option }}" 
-                                               id="{{ field.name }}_{{ loop.index }}"
-                                               {% if data and data.getlist and option in data.getlist(field.name) %}checked{% endif %}>
-                                        <label class="form-check-label" for="{{ field.name }}_{{ loop.index }}">
-                                            {{ option }}
-                                        </label>
-                                    </div>
-                                {% endfor %}
-                                </div>
-                            {% else %}
-                                <!-- Einfache Auswahl als Dropdown -->
-                                <select class="form-select" 
-                                        name="{{ field.name }}" 
-                                        {% if field.required %}required{% endif %}>
-                                    {% if not field.required %}
-                                    <option value="">-- Bitte wählen --</option>
-                                    {% endif %}
-                                    {% for option in field.options %}
-                                    <option value="{{ option }}" 
-                                            {% if option == data.get(field.name) %}selected{% endif %}>
-                                        {{ option }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            {% endif %}
-                        
-                        {% elif field.type == 'signature' %}
-                        <canvas id="signature-pad-{{ field.name }}" class="signature-pad" data-field-name="{{ field.name }}" style="height: {{ field.height }}"></canvas>
-                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear_{{ field.name }}">Löschen</button>
-                        <input type="hidden" name="{{ field.name }}" id="signature64_{{ field.name }}" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                    
-                    <button type="submit" class="btn btn-primary w-100">{{ form.submit_button }}</button>
-                </form>
-            </div>
-        </div>
-    </div>
+{% extends "base.html" %}
 
-    <script src="{{ url_for('static', filename='js/form_handler.js') }}"></script>
-</body>
-</html>
+{% block title %}{{ form.title }} - {{ app_config.company.name | default('Formular-System') }}{% endblock %}
+
+{% block container_width %}600px{% endblock %}
+
+{% block extra_head %}
+<script src="{{ url_for('static', filename='js/signature_pad.umd.min.js') }}"></script>
+{% endblock %}
+
+{% block extra_css %}
+.signature-pad { border: 2px dashed #ccc; border-radius: 5px; width: 100%; touch-action: none; background-color: #fff; }
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="/" class="btn btn-outline-secondary">&larr; Zurück zur Übersicht</a>
+</div>
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title mb-4">{{ form.title }}</h3>
+        {% if form.description %}
+        <p class="text-muted mb-4">{{ form.description }}</p>
+        {% endif %}
+        
+        <form id="dynamicForm" action="/preview/{{ form.form_id }}" method="POST">
+            {% for field in form.fields %}
+            <div class="mb-3">
+                <label class="form-label">
+                    {{ field.label }}
+                    {% if field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                </label>
+                
+                {% if field.type == 'text' %}
+                <input type="text" 
+                       class="form-control" 
+                       name="{{ field.name }}" 
+                       value="{{ data.get(field.name, '') }}" 
+                       placeholder="{{ field.placeholder }}"
+                       {% if field.required %}required{% endif %}>
+                
+                {% elif field.type == 'date' %}
+                <input type="date" 
+                       class="form-control" 
+                       name="{{ field.name }}" 
+                       value="{{ data.get(field.name, '') or field.default_value }}"
+                       {% if field.required %}required{% endif %}>
+                
+                {% elif field.type == 'select' %}
+                    {% if field.multiple %}
+                        <!-- Mehrfachauswahl als Checkboxes -->
+                        <div class="mt-2">
+                        {% for option in field.options %}
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="{{ field.name }}" 
+                                       value="{{ option }}" 
+                                       id="{{ field.name }}_{{ loop.index }}"
+                                       {% if data and data.getlist and option in data.getlist(field.name) %}checked{% endif %}>
+                                <label class="form-check-label" for="{{ field.name }}_{{ loop.index }}">
+                                    {{ option }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <!-- Einfache Auswahl als Dropdown -->
+                        <select class="form-select" 
+                                name="{{ field.name }}" 
+                                {% if field.required %}required{% endif %}>
+                            {% if not field.required %}
+                            <option value="">-- Bitte wählen --</option>
+                            {% endif %}
+                            {% for option in field.options %}
+                            <option value="{{ option }}" 
+                                    {% if option == data.get(field.name) %}selected{% endif %}>
+                                {{ option }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
+                
+                {% elif field.type == 'signature' %}
+                <canvas id="signature-pad-{{ field.name }}" class="signature-pad" data-field-name="{{ field.name }}" style="height: {{ field.height }}"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear_{{ field.name }}">Löschen</button>
+                <input type="hidden" name="{{ field.name }}" id="signature64_{{ field.name }}" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <button type="submit" class="btn btn-primary w-100">{{ form.submit_button }}</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/form_handler.js') }}"></script>
+{% endblock %}

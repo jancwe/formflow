@@ -1,20 +1,15 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Erfolg - Hardware Übergabe</title>
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container mt-5" style="max-width: 600px;">
-        <div class="card shadow text-center">
-            <div class="card-body py-5">
-                <h3 class="card-title text-success mb-4">Erfolgreich gespeichert!</h3>
-                <p class="card-text mb-4">Das Übergabeprotokoll wurde erfolgreich als PDF auf dem Server abgelegt. Das Fenster kann geschlossen werden.</p>
-                <a href="/" class="btn btn-primary">Neues Formular ausfüllen</a>
-            </div>
-        </div>
+{% extends "base.html" %}
+
+{% block title %}Erfolg - {{ app_config.company.name | default('Formular-System') }}{% endblock %}
+
+{% block container_width %}600px{% endblock %}
+
+{% block content %}
+<div class="card text-center">
+    <div class="card-body py-5">
+        <h3 class="card-title text-success mb-4">Erfolgreich gespeichert!</h3>
+        <p class="card-text mb-4">Das Dokument wurde erfolgreich als PDF auf dem Server abgelegt. Das Fenster kann geschlossen werden.</p>
+        <a href="/" class="btn btn-primary">Zurück zur Übersicht</a>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

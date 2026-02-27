@@ -1,0 +1,12 @@
+# Corporate Identity Konfiguration für die PDF-Generierung
+company:
+  name: "Musterfirma GmbH"
+  address: "Musterstraße 123 &bull; 12345 Musterstadt"
+  logo_filename: "logo.png"
+
+colors:
+  primary: "#0056b3"      # Hauptfarbe (z.B. für Header-Linie, Titel)
+  text_dark: "#32373c"    # Dunkler Text (z.B. für Überschriften)
+  text_light: "#6d6d6d"   # Heller Text (z.B. für Tabellen-Header)
+  bg_light: "#fdfdfd"     # Sehr heller Hintergrund (z.B. für Tabellen)
+  bg_gray: "#f8f8f8"      # Grauer Hintergrund (z.B. für Tabellen-Header)

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_config.company.name | default('Formular-System') }}{% endblock %}</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: {{ app_config.colors.primary | default('#0056b3') }};
+            --text-dark: {{ app_config.colors.text_dark | default('#32373c') }};
+            --text-light: {{ app_config.colors.text_light | default('#6d6d6d') }};
+            --bg-light: {{ app_config.colors.bg_light | default('#fdfdfd') }};
+            --bg-gray: {{ app_config.colors.bg_gray | default('#f8f8f8') }};
+        }
+        
+        body {
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+        }
+        
+        .navbar {
+            background-color: #fff;
+            border-bottom: 3px solid var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
+        }
+        
+        .navbar-brand img {
+            max-height: 40px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            filter: brightness(90%);
+            border-color: var(--primary-color);
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,.05);
+        }
+        
+        .card-title {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        {% block extra_css %}{% endblock %}
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                {% if app_config.company and app_config.company.logo_filename %}
+                <img src="{{ url_for('static', filename=app_config.company.logo_filename) }}" alt="{{ app_config.company.name | default('Logo') }}">
+                {% else %}
+                {{ app_config.company.name | default('Formular-System') }}
+                {% endif %}
+            </a>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: {% block container_width %}800px{% endblock %};">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="mt-5 py-4 text-center text-muted" style="font-size: 0.9em;">
+        <div class="container">
+            {{ app_config.company.name | default('Musterfirma') }} &bull; {{ app_config.company.address | default('Musterstraße 1 &bull; 12345 Musterstadt') | safe }}
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

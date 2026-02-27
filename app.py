@@ -22,7 +22,7 @@ def index():
     # Debug-Ausgabe
     print("Verfügbare Formulare:", list(form_engine.forms.keys()))
     
-    return render_template('form_list.html', forms=form_engine.forms)
+    return render_template('form_list.html', forms=form_engine.forms, app_config=form_engine.config)
 
 @app.route('/pdf/<filename>')
 def serve_pdf(filename):

@@ -13,7 +13,7 @@ class PdfGenerator:
     def __init__(self, templates_dir: str = 'pdf_templates'):
         self.templates_dir = templates_dir
 
-    def generate(self, form_def: Dict[str, Any], form_data: Dict[str, Any], output_filename: str) -> None:
+    def generate(self, form_def: Dict[str, Any], form_data: Dict[str, Any], output_filename: str, config: Dict[str, Any] = None) -> None:
         """
         Generiert ein PDF basierend auf einem HTML-Template und WeasyPrint.
         
@@ -21,7 +21,11 @@ class PdfGenerator:
             form_def: Die YAML-Definition des Formulars als Dictionary.
             form_data: Die vom Benutzer eingegebenen Daten.
             output_filename: Der absolute oder relative Pfad, unter dem das PDF gespeichert werden soll.
+            config: Globale Konfiguration (CI-Farben, Firmenname etc.)
         """
+        if config is None:
+            config = {}
+            
         # Template-Name aus YAML lesen oder Standard verwenden
         template_name = form_def.get('pdf_template', 'default_pdf.html')
         template_path = os.path.join(self.templates_dir, template_name)
@@ -41,7 +45,9 @@ class PdfGenerator:
             form_title=form_def.get('title', 'Formular'),
             fields=form_def.get('fields', []),
             form_data=form_data,
-            date_today=date.today().strftime("%d.%m.%Y")
+            date_today=date.today().strftime("%d.%m.%Y"),
+            uuid=os.path.basename(output_filename).replace('temp_', '').replace('.pdf', ''),
+            config=config
         )
         
         # HTML zu PDF konvertieren

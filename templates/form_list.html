@@ -1,37 +1,30 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verfügbare Formulare</title>
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container mt-5" style="max-width: 800px;">
-        <div class="card shadow">
-            <div class="card-body">
-                <h3 class="card-title mb-4">Verfügbare Formulare</h3>
-                
-                {% if forms %}
-                <div class="list-group">
-                    {% for form_id, form in forms.items() %}
-                    <a href="/form/{{ form_id }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ form.title }}</h5>
-                        </div>
-                        {% if form.description %}
-                        <p class="mb-1 text-muted">{{ form.description }}</p>
-                        {% endif %}
-                    </a>
-                    {% endfor %}
+{% extends "base.html" %}
+
+{% block title %}Verfügbare Formulare - {{ app_config.company.name | default('Formular-System') }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Verfügbare Formulare</h3>
+        
+        {% if forms %}
+        <div class="list-group">
+            {% for form_id, form in forms.items() %}
+            <a href="/form/{{ form_id }}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1" style="color: var(--text-dark);">{{ form.title }}</h5>
                 </div>
-                {% else %}
-                <div class="alert alert-info">
-                    Keine Formulare verfügbar. Bitte legen Sie YAML-Formulardefinitionen im Verzeichnis "forms" an.
-                </div>
+                {% if form.description %}
+                <p class="mb-1 text-muted">{{ form.description }}</p>
                 {% endif %}
-            </div>
+            </a>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="alert alert-info">
+            Keine Formulare verfügbar. Bitte legen Sie YAML-Formulardefinitionen im Verzeichnis "forms" an.
+        </div>
+        {% endif %}
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
