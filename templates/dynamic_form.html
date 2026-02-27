@@ -83,9 +83,9 @@
                             {% endif %}
                         
                         {% elif field.type == 'signature' %}
-                        <canvas id="signature-pad" class="signature-pad" style="height: {{ field.height }}"></canvas>
-                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear">Löschen</button>
-                        <input type="hidden" name="{{ field.name }}" id="signature64" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
+                        <canvas id="signature-pad-{{ field.name }}" class="signature-pad" data-field-name="{{ field.name }}" style="height: {{ field.height }}"></canvas>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear_{{ field.name }}">Löschen</button>
+                        <input type="hidden" name="{{ field.name }}" id="signature64_{{ field.name }}" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
                         {% endif %}
                     </div>
                     {% endfor %}
@@ -96,48 +96,6 @@
         </div>
     </div>
 
-    <script>
-        // Signature Pad Initialisierung
-        const canvas = document.getElementById('signature-pad');
-        if (canvas) {
-            function resizeCanvas() {
-                const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                canvas.width = canvas.offsetWidth * ratio;
-                canvas.height = canvas.offsetHeight * ratio;
-                canvas.getContext("2d").scale(ratio, ratio);
-            }
-            window.onresize = resizeCanvas;
-            resizeCanvas();
-
-            const signaturePad = new SignaturePad(canvas);
-            
-            // Wenn wir vom "Bearbeiten" zurückkommen, Unterschrift wiederherstellen
-            const existingSignature = document.getElementById('signature64').value;
-            if (existingSignature) {
-                signaturePad.fromDataURL(existingSignature);
-            }
-
-            document.getElementById('clear').addEventListener('click', () => {
-                signaturePad.clear();
-                document.getElementById('signature64').value = '';
-            });
-
-            document.getElementById('dynamicForm').addEventListener('submit', (e) => {
-                // Prüfen, ob das Unterschriftsfeld ein Pflichtfeld ist
-                const signatureField = document.getElementById('signature64');
-                const isSignatureRequired = signatureField && signatureField.hasAttribute('required');
-
-                if (isSignatureRequired && signaturePad.isEmpty() && !signatureField.value) {
-                    e.preventDefault();
-                    alert("Bitte unterschreiben!");
-                } else {
-                    // Nur aktualisieren, wenn neu unterschrieben wurde
-                    if (!signaturePad.isEmpty()) {
-                        signatureField.value = signaturePad.toDataURL();
-                    }
-                }
-            });
-        }
-    </script>
+    <script src="{{ url_for('static', filename='js/form_handler.js') }}"></script>
 </body>
 </html>

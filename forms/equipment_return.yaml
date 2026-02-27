@@ -8,6 +8,7 @@ fields:
     label: Benutzername
     required: true
     placeholder: Vollständiger Name des Benutzers
+    in_filename: true
 
   - type: text
     name: equipment_type
@@ -20,6 +21,7 @@ fields:
     label: Geräte-ID / Seriennummer
     required: true
     placeholder: z.B. ABC123XYZ
+    in_filename: true
 
   - type: select
     name: condition

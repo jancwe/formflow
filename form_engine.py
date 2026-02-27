@@ -3,24 +3,25 @@ import os
 import logging
 import re
 from datetime import date
-from flask import render_template, request, redirect, url_for
-from weasyprint import HTML
-import base64
+from typing import Dict, Any
+from flask import render_template, request, redirect, url_for, Flask
 import uuid
 import time
+from pdf_generator import PdfGenerator
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
 class FormEngine:
-    def __init__(self, app, forms_dir='forms'):
+    def __init__(self, app: Flask, forms_dir: str = 'forms'):
         self.app = app
         self.forms_dir = forms_dir
-        self.forms = {}
+        self.forms: Dict[str, Any] = {}
+        self.pdf_generator = PdfGenerator()
         self._load_forms()
         self._register_routes()
     
-    def _load_forms(self):
+    def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""
         if not os.path.exists(self.forms_dir):
             os.makedirs(self.forms_dir)
@@ -45,7 +46,7 @@ class FormEngine:
         
         logger.info(f"Insgesamt {len(self.forms)} Formulare geladen: {list(self.forms.keys())}")
     
-    def _register_routes(self):
+    def _register_routes(self) -> None:
         """Registriert die Flask-Routen für jedes Formular"""
         
         @self.app.route('/forms')
@@ -56,7 +57,7 @@ class FormEngine:
             return render_template('form_list.html', forms=self.forms)
         
         @self.app.route('/form/<form_id>', methods=['GET', 'POST'])
-        def show_form(form_id):
+        def show_form(form_id: str):
             """Zeigt ein bestimmtes Formular an"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
@@ -78,13 +79,13 @@ class FormEngine:
                                   date_today=date.today().isoformat())
         
         @self.app.route('/preview/<form_id>', methods=['POST'])
-        def preview_form(form_id):
+        def preview_form(form_id: str):
             """Generiert eine Vorschau des ausgefüllten Formulars"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
                 
             form_def = self.forms[form_id]
-            form_data = {}
+            form_data: Dict[str, Any] = {}
             
             # Formulardaten sammeln
             for field in form_def.get('fields', []):
@@ -100,7 +101,7 @@ class FormEngine:
             # PDF generieren
             file_id = uuid.uuid4().hex
             temp_filename = f"pdfs/temp_{file_id}.pdf"
-            self._generate_pdf(form_def, form_data, temp_filename)
+            self.pdf_generator.generate(form_def, form_data, temp_filename)
             
             return render_template('preview.html',
                                   uuid=file_id,
@@ -108,7 +109,7 @@ class FormEngine:
                                   form_data=form_data)
         
         @self.app.route('/confirm/<form_id>/<file_id>', methods=['POST'])
-        def confirm_form(form_id, file_id):
+        def confirm_form(form_id: str, file_id: str):
             """Bestätigt das Formular und speichert das PDF"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
@@ -145,7 +146,7 @@ class FormEngine:
             return "Fehler: Temporäre Datei nicht gefunden.", 400
         
         @self.app.route('/edit/<form_id>/<file_id>', methods=['POST'])
-        def edit_form(form_id, file_id):
+        def edit_form(form_id: str, file_id: str):
             """Zurück zum Bearbeiten des Formulars"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
@@ -155,32 +156,3 @@ class FormEngine:
                 os.remove(temp_filename)
             
             return redirect(url_for('show_form', form_id=form_id))
-    
-    def _generate_pdf(self, form_def, form_data, output_filename):
-        """Generiert ein PDF basierend auf einem HTML-Template und WeasyPrint"""
-        
-        # Template-Name aus YAML lesen oder Standard verwenden
-        template_name = form_def.get('pdf_template', 'default_pdf.html')
-        template_path = os.path.join('pdf_templates', template_name)
-        
-        # Fallback, falls das Template nicht existiert
-        if not os.path.exists(template_path):
-            logger.warning(f"PDF-Template {template_name} nicht gefunden. Verwende default_pdf.html")
-            template_path = os.path.join('pdf_templates', 'default_pdf.html')
-            
-        # HTML mit Jinja2 rendern
-        # Da wir nicht im app-Kontext sind, wenn wir render_template mit einem absoluten Pfad aufrufen,
-        # lesen wir die Datei manuell und nutzen Jinja2 direkt
-        from jinja2 import Template
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template = Template(f.read())
-            
-        html_content = template.render(
-            form_title=form_def.get('title', 'Formular'),
-            fields=form_def.get('fields', []),
-            form_data=form_data,
-            date_today=date.today().strftime("%d.%m.%Y")
-        )
-        
-        # HTML zu PDF konvertieren
-        HTML(string=html_content).write_pdf(output_filename)
