@@ -1,11 +1,15 @@
 import yaml
 import os
+import logging
 from datetime import date
 from flask import render_template, request, redirect, url_for
 from fpdf import FPDF
 import base64
 import uuid
 import time
+
+# Logger konfigurieren
+logger = logging.getLogger(__name__)
 
 class FormEngine:
     def __init__(self, app, forms_dir='forms'):
@@ -20,13 +24,25 @@ class FormEngine:
         if not os.path.exists(self.forms_dir):
             os.makedirs(self.forms_dir)
             
+        # Formulare bei jedem Aufruf neu laden
+        self.forms = {}
+        
+        logger.info(f"Lade Formulare aus Verzeichnis: {self.forms_dir}")
+        logger.info(f"Gefundene Dateien: {os.listdir(self.forms_dir)}")
+        
         for filename in os.listdir(self.forms_dir):
             if filename.endswith('.yaml') or filename.endswith('.yml'):
                 form_path = os.path.join(self.forms_dir, filename)
-                with open(form_path, 'r') as file:
-                    form_def = yaml.safe_load(file)
-                    form_id = form_def.get('form_id', os.path.splitext(filename)[0])
-                    self.forms[form_id] = form_def
+                try:
+                    with open(form_path, 'r') as file:
+                        form_def = yaml.safe_load(file)
+                        form_id = form_def.get('form_id', os.path.splitext(filename)[0])
+                        self.forms[form_id] = form_def
+                        logger.info(f"Formular geladen: {form_id} aus {filename}")
+                except Exception as e:
+                    logger.error(f"Fehler beim Laden von {filename}: {str(e)}")
+        
+        logger.info(f"Insgesamt {len(self.forms)} Formulare geladen: {list(self.forms.keys())}")
     
     def _register_routes(self):
         """Registriert die Flask-Routen für jedes Formular"""
@@ -34,6 +50,8 @@ class FormEngine:
         @self.app.route('/forms')
         def list_forms():
             """Zeigt eine Liste aller verfügbaren Formulare an"""
+            # Formulare neu laden, um Änderungen zu erkennen
+            self._load_forms()
             return render_template('form_list.html', forms=self.forms)
         
         @self.app.route('/form/<form_id>', methods=['GET', 'POST'])

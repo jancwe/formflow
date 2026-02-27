@@ -1,6 +1,11 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request
 import os
 from form_engine import FormEngine
+import logging
+
+# Logging konfigurieren
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 os.makedirs('pdfs', exist_ok=True)
@@ -11,6 +16,12 @@ form_engine = FormEngine(app)
 @app.route('/')
 def index():
     """Startseite - Weiterleitung zur Formularliste"""
+    # Formulare neu laden, um Änderungen zu erkennen
+    form_engine._load_forms()
+    
+    # Debug-Ausgabe
+    print("Verfügbare Formulare:", list(form_engine.forms.keys()))
+    
     return render_template('form_list.html', forms=form_engine.forms)
 
 @app.route('/pdf/<filename>')
