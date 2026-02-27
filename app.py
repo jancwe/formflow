@@ -4,6 +4,7 @@ import base64
 import os
 import time
 import uuid
+from datetime import date
 
 app = Flask(__name__)
 os.makedirs('pdfs', exist_ok=True)
@@ -13,13 +14,16 @@ def index():
     data = {}
     if request.method == 'POST':
         data = request.form
-    return render_template('index.html', data=data)
+    # Aktuelles Datum im Format YYYY-MM-DD für das Datumfeld
+    date_today = date.today().isoformat()
+    return render_template('index.html', data=data, date_today=date_today)
 
 @app.route('/preview', methods=['POST'])
 def preview():
     user = request.form.get('user')
     notebook = request.form.get('notebook')
     service_tag = request.form.get('service_tag')
+    handover_date = request.form.get('handover_date')
     signature_data = request.form.get('signature')
 
     pdf = FPDF()
@@ -32,6 +36,7 @@ def preview():
     pdf.cell(0, 10, text=f"Benutzer: {user}", new_x="LMARGIN", new_y="NEXT")
     pdf.cell(0, 10, text=f"Notebook-Name: {notebook}", new_x="LMARGIN", new_y="NEXT")
     pdf.cell(0, 10, text=f"Service Tag: {service_tag}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 10, text=f"Übergabedatum: {handover_date}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(10)
     pdf.cell(0, 10, text="Unterschrift des Benutzers:", new_x="LMARGIN", new_y="NEXT")
 
@@ -52,6 +57,7 @@ def preview():
                            user=user, 
                            notebook=notebook, 
                            service_tag=service_tag, 
+                           handover_date=handover_date,
                            signature=signature_data)
 
 @app.route('/pdf/<filename>')

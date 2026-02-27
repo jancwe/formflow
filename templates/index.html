@@ -29,6 +29,10 @@
                         <input type="text" class="form-control" name="service_tag" value="{{ data.get('service_tag', '') }}" required>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Übergabedatum</label>
+                        <input type="date" class="form-control" name="handover_date" value="{{ data.get('handover_date', '') or date_today }}" required>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Unterschrift</label>
                         <canvas id="signature-pad"></canvas>
                         <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear">Löschen</button>
