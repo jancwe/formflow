@@ -48,24 +48,39 @@
                                {% if field.required %}required{% endif %}>
                         
                         {% elif field.type == 'select' %}
-                        <select class="form-select" 
-                                name="{{ field.name }}" 
-                                {% if field.multiple %}multiple{% endif %}
-                                {% if field.required %}required{% endif %}>
-                            {% if not field.multiple and not field.required %}
-                            <option value="">-- Bitte wählen --</option>
+                            {% if field.multiple %}
+                                <!-- Mehrfachauswahl als Checkboxes -->
+                                <div class="mt-2">
+                                {% for option in field.options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               name="{{ field.name }}" 
+                                               value="{{ option }}" 
+                                               id="{{ field.name }}_{{ loop.index }}"
+                                               {% if data and data.getlist and option in data.getlist(field.name) %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ field.name }}_{{ loop.index }}">
+                                            {{ option }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            {% else %}
+                                <!-- Einfache Auswahl als Dropdown -->
+                                <select class="form-select" 
+                                        name="{{ field.name }}" 
+                                        {% if field.required %}required{% endif %}>
+                                    {% if not field.required %}
+                                    <option value="">-- Bitte wählen --</option>
+                                    {% endif %}
+                                    {% for option in field.options %}
+                                    <option value="{{ option }}" 
+                                            {% if option == data.get(field.name) %}selected{% endif %}>
+                                        {{ option }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
                             {% endif %}
-                            {% for option in field.options %}
-                            <option value="{{ option }}" 
-                                    {% if data and data.getlist and option in data.getlist(field.name) %}selected
-                                    {% elif option == data.get(field.name) %}selected{% endif %}>
-                                {{ option }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        {% if field.multiple %}
-                        <div class="form-text">Halten Sie Strg (Windows) bzw. Cmd (Mac) gedrückt, um mehrere Optionen auszuwählen.</div>
-                        {% endif %}
                         
                         {% elif field.type == 'signature' %}
                         <canvas id="signature-pad" class="signature-pad" style="height: {{ field.height }}"></canvas>
