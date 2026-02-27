@@ -88,7 +88,13 @@ class FormEngine:
             # Formulardaten sammeln
             for field in form_def.get('fields', []):
                 field_name = field.get('name')
-                form_data[field_name] = request.form.get(field_name, '')
+                
+                # Bei 'select' mit 'multiple: true' müssen wir getlist() verwenden
+                if field.get('type') == 'select' and field.get('multiple'):
+                    selected_options = request.form.getlist(field_name)
+                    form_data[field_name] = ", ".join(selected_options)
+                else:
+                    form_data[field_name] = request.form.get(field_name, '')
             
             # PDF generieren
             pdf = self._generate_pdf(form_def, form_data)

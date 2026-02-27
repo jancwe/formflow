@@ -21,11 +21,28 @@ fields:
     required: true
     placeholder: z.B. ABC123XYZ
 
-  - type: text
+  - type: select
     name: condition
     label: Zustand
     required: true
-    placeholder: z.B. Neuwertig, Gebrauchsspuren, Beschädigt
+    options:
+      - Neuwertig
+      - Leichte Gebrauchsspuren
+      - Starke Gebrauchsspuren
+      - Beschädigt
+      - Defekt
+
+  - type: select
+    name: accessories
+    label: Zubehör (Mehrfachauswahl möglich)
+    required: false
+    multiple: true
+    options:
+      - Netzteil
+      - Maus
+      - Tastatur
+      - Headset
+      - Laptoptasche
 
   - type: date
     name: return_date
@@ -50,6 +67,8 @@ pdf:
       field: equipment_id
     - label: Zustand
       field: condition
+    - label: Zubehör
+      field: accessories
     - label: Rückgabedatum
       field: return_date
     - label: Unterschrift des Benutzers

@@ -47,6 +47,26 @@
                                value="{{ data.get(field.name, '') or field.default_value }}"
                                {% if field.required %}required{% endif %}>
                         
+                        {% elif field.type == 'select' %}
+                        <select class="form-select" 
+                                name="{{ field.name }}" 
+                                {% if field.multiple %}multiple{% endif %}
+                                {% if field.required %}required{% endif %}>
+                            {% if not field.multiple and not field.required %}
+                            <option value="">-- Bitte wählen --</option>
+                            {% endif %}
+                            {% for option in field.options %}
+                            <option value="{{ option }}" 
+                                    {% if data and data.getlist and option in data.getlist(field.name) %}selected
+                                    {% elif option == data.get(field.name) %}selected{% endif %}>
+                                {{ option }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if field.multiple %}
+                        <div class="form-text">Halten Sie Strg (Windows) bzw. Cmd (Mac) gedrückt, um mehrere Optionen auszuwählen.</div>
+                        {% endif %}
+                        
                         {% elif field.type == 'signature' %}
                         <canvas id="signature-pad" class="signature-pad" style="height: {{ field.height }}"></canvas>
                         <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear">Löschen</button>
