@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  signage-app:
+    build: .
+    ports:
+      - "8080:5000"
+    volumes:
+      - ./pdf_output:/app/pdfs
+    restart: unless-stopped
