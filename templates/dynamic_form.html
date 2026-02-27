@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ form.title }}</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/signature_pad.umd.min.js') }}"></script>
+    <style>
+        .signature-pad { border: 2px dashed #ccc; border-radius: 5px; width: 100%; touch-action: none; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5" style="max-width: 600px;">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="card-title mb-4">{{ form.title }}</h3>
+                {% if form.description %}
+                <p class="text-muted mb-4">{{ form.description }}</p>
+                {% endif %}
+                
+                <form id="dynamicForm" action="/preview/{{ form.form_id }}" method="POST">
+                    {% for field in form.fields %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        
+                        {% if field.type == 'text' %}
+                        <input type="text" 
+                               class="form-control" 
+                               name="{{ field.name }}" 
+                               value="{{ data.get(field.name, '') }}" 
+                               placeholder="{{ field.placeholder }}"
+                               {% if field.required %}required{% endif %}>
+                        
+                        {% elif field.type == 'date' %}
+                        <input type="date" 
+                               class="form-control" 
+                               name="{{ field.name }}" 
+                               value="{{ data.get(field.name, '') or field.default_value }}"
+                               {% if field.required %}required{% endif %}>
+                        
+                        {% elif field.type == 'signature' %}
+                        <canvas id="signature-pad" class="signature-pad" style="height: {{ field.height }}"></canvas>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear">Löschen</button>
+                        <input type="hidden" name="{{ field.name }}" id="signature64" value="{{ data.get(field.name, '') }}">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    <button type="submit" class="btn btn-primary w-100">{{ form.submit_button }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Signature Pad Initialisierung
+        const canvas = document.getElementById('signature-pad');
+        if (canvas) {
+            function resizeCanvas() {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+            }
+            window.onresize = resizeCanvas;
+            resizeCanvas();
+
+            const signaturePad = new SignaturePad(canvas);
+            
+            // Wenn wir vom "Bearbeiten" zurückkommen, Unterschrift wiederherstellen
+            const existingSignature = document.getElementById('signature64').value;
+            if (existingSignature) {
+                signaturePad.fromDataURL(existingSignature);
+            }
+
+            document.getElementById('clear').addEventListener('click', () => {
+                signaturePad.clear();
+                document.getElementById('signature64').value = '';
+            });
+
+            document.getElementById('dynamicForm').addEventListener('submit', (e) => {
+                if (signaturePad.isEmpty() && !document.getElementById('signature64').value) {
+                    e.preventDefault();
+                    alert("Bitte unterschreiben!");
+                } else {
+                    // Nur aktualisieren, wenn neu unterschrieben wurde
+                    if (!signaturePad.isEmpty()) {
+                        document.getElementById('signature64').value = signaturePad.toDataURL();
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

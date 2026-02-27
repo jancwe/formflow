@@ -1,0 +1,50 @@
+title: Notebook Übergabe
+description: Formular zur Erfassung der Übergabe eines Notebooks an einen Mitarbeiter
+form_id: notebook_handover
+submit_button: Vorschau anzeigen
+fields:
+  - type: text
+    name: user
+    label: Benutzername
+    required: true
+    placeholder: Vollständiger Name des Benutzers
+
+  - type: text
+    name: notebook
+    label: Notebook Name
+    required: true
+    placeholder: z.B. ThinkPad X1 Carbon
+
+  - type: text
+    name: service_tag
+    label: Service Tag
+    required: true
+    placeholder: z.B. ABC123XYZ
+
+  - type: date
+    name: handover_date
+    label: Übergabedatum
+    required: true
+    default: today
+
+  - type: signature
+    name: signature
+    label: Unterschrift
+    required: true
+    height: 200px
+
+pdf:
+  title: Übergabeprotokoll Hardware
+  fields:
+    - label: Benutzer
+      field: user
+    - label: Notebook-Name
+      field: notebook
+    - label: Service Tag
+      field: service_tag
+    - label: Übergabedatum
+      field: handover_date
+    - label: Unterschrift des Benutzers
+      field: signature
+      type: image
+      width: 80

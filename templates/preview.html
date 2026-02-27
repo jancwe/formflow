@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vorschau - Hardware Übergabe</title>
+    <title>Vorschau - Formular</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <style>
         .pdf-preview {
@@ -18,24 +18,22 @@
     <div class="container mt-5" style="max-width: 800px;">
         <div class="card shadow">
             <div class="card-body">
-                <h3 class="card-title mb-4">Vorschau: Übergabeprotokoll</h3>
+                <h3 class="card-title mb-4">Vorschau: Formular</h3>
                 
                 <div class="mb-4">
                     <iframe src="/pdf/temp_{{ uuid }}.pdf" class="pdf-preview"></iframe>
                 </div>
 
                 <div class="d-flex justify-content-between">
-                    <form action="/edit/{{ uuid }}" method="POST" class="w-50 pe-2">
-                        <input type="hidden" name="user" value="{{ user }}">
-                        <input type="hidden" name="notebook" value="{{ notebook }}">
-                        <input type="hidden" name="service_tag" value="{{ service_tag }}">
-                        <input type="hidden" name="handover_date" value="{{ handover_date }}">
-                        <input type="hidden" name="signature" value="{{ signature }}">
+                    <form action="/edit/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 pe-2">
+                        {% for key, value in form_data.items() %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endfor %}
                         <button type="submit" class="btn btn-outline-secondary w-100">Zurück zum Bearbeiten</button>
                     </form>
                     
-                    <form action="/confirm/{{ uuid }}" method="POST" class="w-50 ps-2">
-                        <input type="hidden" name="user" value="{{ user }}">
+                    <form action="/confirm/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 ps-2">
+                        <input type="hidden" name="user" value="{{ form_data.user }}">
                         <button type="submit" class="btn btn-success w-100">Bestätigen & Speichern</button>
                     </form>
                 </div>
