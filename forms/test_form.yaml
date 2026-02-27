@@ -26,17 +26,3 @@ fields:
     label: Unterschrift
     required: true
     height: 200px
-
-pdf:
-  title: Testformular
-  fields:
-    - label: Name
-      field: name
-    - label: E-Mail
-      field: email
-    - label: Testdatum
-      field: test_date
-    - label: Unterschrift
-      field: signature
-      type: image
-      width: 80

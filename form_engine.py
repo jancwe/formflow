@@ -1,6 +1,7 @@
 import yaml
 import os
 import logging
+import re
 from datetime import date
 from flask import render_template, request, redirect, url_for
 from fpdf import FPDF
@@ -117,10 +118,28 @@ class FormEngine:
                 
             form_def = self.forms[form_id]
             
-            # Benutzernamen für den Dateinamen verwenden
-            user = request.form.get('user', 'unbekannt')
+            # Dateinamen aus den markierten Feldern generieren
+            filename_parts = [form_id]
+            
+            for field in form_def.get('fields', []):
+                if field.get('in_filename'):
+                    field_name = field.get('name')
+                    value = request.form.get(field_name, '')
+                    if value:
+                        # Ersetze Leerzeichen durch Unterstriche
+                        clean_value = value.replace(' ', '_')
+                        # Entferne alle Zeichen, die nicht alphanumerisch, Bindestrich oder Unterstrich sind
+                        # Das schützt vor problematischen Zeichen in Windows (\ / : * ? " < > |) und Linux
+                        clean_value = re.sub(r'[^a-zA-Z0-9_-]', '', clean_value)
+                        
+                        if clean_value: # Nur hinzufügen, wenn nach der Bereinigung noch etwas übrig ist
+                            filename_parts.append(clean_value)
+            
+            # Zeitstempel anhängen, um Eindeutigkeit zu garantieren
+            filename_parts.append(str(int(time.time())))
+            
             temp_filename = f"pdfs/temp_{file_id}.pdf"
-            final_filename = f"pdfs/{form_id}_{user.replace(' ', '_')}_{int(time.time())}.pdf"
+            final_filename = f"pdfs/{'_'.join(filename_parts)}.pdf"
             
             if os.path.exists(temp_filename):
                 os.rename(temp_filename, final_filename)
@@ -145,20 +164,21 @@ class FormEngine:
         pdf = FPDF()
         pdf.add_page()
         
-        # Titel
+        # Titel (aus form_def.title oder form_def.pdf.title für Abwärtskompatibilität)
+        pdf_title = form_def.get('pdf', {}).get('title', form_def.get('title', 'Formular'))
+        
         pdf.set_font("helvetica", style="B", size=16)
-        pdf.cell(0, 10, text=form_def.get('pdf', {}).get('title', form_def.get('title', '')), 
-                new_x="LMARGIN", new_y="NEXT", align='C')
+        pdf.cell(0, 10, text=pdf_title, new_x="LMARGIN", new_y="NEXT", align='C')
         pdf.ln(10)
         
-        # Felder
+        # Felder direkt aus der 'fields'-Definition lesen
         pdf.set_font("helvetica", size=12)
-        for field_def in form_def.get('pdf', {}).get('fields', []):
-            field_name = field_def.get('field')
+        for field_def in form_def.get('fields', []):
+            field_name = field_def.get('name')
             field_label = field_def.get('label', field_name)
             field_type = field_def.get('type', 'text')
             
-            if field_type == 'image' and field_name == 'signature':
+            if field_type == 'signature':
                 # Unterschrift
                 pdf.cell(0, 10, text=f"{field_label}:", new_x="LMARGIN", new_y="NEXT")
                 signature_data = form_data.get(field_name, '')
@@ -168,10 +188,18 @@ class FormEngine:
                     temp_sig_filename = f"temp_sig_{uuid.uuid4().hex}.png"
                     with open(temp_sig_filename, "wb") as fh:
                         fh.write(base64.b64decode(encoded))
-                    pdf.image(temp_sig_filename, x=10, y=pdf.get_y(), w=field_def.get('width', 80))
+                    # Breite aus der alten pdf-Definition übernehmen, falls vorhanden, sonst Standard 80
+                    width = 80
+                    if 'pdf' in form_def and 'fields' in form_def['pdf']:
+                        for pdf_field in form_def['pdf']['fields']:
+                            if pdf_field.get('field') == field_name:
+                                width = pdf_field.get('width', 80)
+                                break
+                    
+                    pdf.image(temp_sig_filename, x=10, y=pdf.get_y(), w=width)
                     os.remove(temp_sig_filename)
             else:
-                # Normales Textfeld
+                # Normales Textfeld, Datum, Select etc.
                 value = form_data.get(field_name, '')
                 pdf.cell(0, 10, text=f"{field_label}: {value}", new_x="LMARGIN", new_y="NEXT")
         

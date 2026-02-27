@@ -33,7 +33,9 @@
                     </form>
                     
                     <form action="/confirm/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 ps-2">
-                        <input type="hidden" name="user" value="{{ form_data.user }}">
+                        {% for key, value in form_data.items() %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endfor %}
                         <button type="submit" class="btn btn-success w-100">Bestätigen & Speichern</button>
                     </form>
                 </div>

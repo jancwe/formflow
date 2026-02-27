@@ -55,23 +55,3 @@ fields:
     label: Unterschrift
     required: true
     height: 200px
-
-pdf:
-  title: Rückgabeprotokoll Hardware
-  fields:
-    - label: Benutzer
-      field: user
-    - label: Gerätetyp
-      field: equipment_type
-    - label: Geräte-ID / Seriennummer
-      field: equipment_id
-    - label: Zustand
-      field: condition
-    - label: Zubehör
-      field: accessories
-    - label: Rückgabedatum
-      field: return_date
-    - label: Unterschrift des Benutzers
-      field: signature
-      type: image
-      width: 80

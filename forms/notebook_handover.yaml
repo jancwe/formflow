@@ -8,43 +8,31 @@ fields:
     label: Benutzername
     required: true
     placeholder: Vollständiger Name des Benutzers
+    in_filename: true
 
   - type: text
     name: notebook
     label: Notebook Name
     required: true
     placeholder: z.B. ThinkPad X1 Carbon
+    in_filename: true
 
   - type: text
     name: service_tag
     label: Service Tag
     required: true
     placeholder: z.B. ABC123XYZ
+    in_filename: true
 
   - type: date
     name: handover_date
     label: Übergabedatum
     required: true
     default: today
+    in_filename: true
 
   - type: signature
     name: signature
     label: Unterschrift
     required: true
     height: 200px
-
-pdf:
-  title: Übergabeprotokoll Hardware
-  fields:
-    - label: Benutzer
-      field: user
-    - label: Notebook-Name
-      field: notebook
-    - label: Service Tag
-      field: service_tag
-    - label: Übergabedatum
-      field: handover_date
-    - label: Unterschrift des Benutzers
-      field: signature
-      type: image
-      width: 80
