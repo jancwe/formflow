@@ -15,26 +15,26 @@
         <div class="card shadow">
             <div class="card-body">
                 <h3 class="card-title mb-4">Notebook Übergabe</h3>
-                <form id="handoverForm" action="/submit" method="POST">
+                <form id="handoverForm" action="/preview" method="POST">
                     <div class="mb-3">
                         <label class="form-label">Benutzername</label>
-                        <input type="text" class="form-control" name="user" required>
+                        <input type="text" class="form-control" name="user" value="{{ data.get('user', '') }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Notebook Name</label>
-                        <input type="text" class="form-control" name="notebook" required>
+                        <input type="text" class="form-control" name="notebook" value="{{ data.get('notebook', '') }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Service Tag</label>
-                        <input type="text" class="form-control" name="service_tag" required>
+                        <input type="text" class="form-control" name="service_tag" value="{{ data.get('service_tag', '') }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Unterschrift</label>
                         <canvas id="signature-pad"></canvas>
                         <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clear">Löschen</button>
                     </div>
-                    <input type="hidden" name="signature" id="signature64">
-                    <button type="submit" class="btn btn-primary w-100">Speichern & Abschließen</button>
+                    <input type="hidden" name="signature" id="signature64" value="{{ data.get('signature', '') }}">
+                    <button type="submit" class="btn btn-primary w-100">Vorschau anzeigen</button>
                 </form>
             </div>
         </div>
@@ -42,7 +42,6 @@
 
     <script>
         const canvas = document.getElementById('signature-pad');
-        // Canvas an die tatsächliche Größe anpassen für scharfe Linien
         function resizeCanvas() {
             const ratio =  Math.max(window.devicePixelRatio || 1, 1);
             canvas.width = canvas.offsetWidth * ratio;
@@ -53,17 +52,27 @@
         resizeCanvas();
 
         const signaturePad = new SignaturePad(canvas);
+        
+        // Wenn wir vom "Bearbeiten" zurückkommen, Unterschrift wiederherstellen
+        const existingSignature = document.getElementById('signature64').value;
+        if (existingSignature) {
+            signaturePad.fromDataURL(existingSignature);
+        }
 
         document.getElementById('clear').addEventListener('click', () => {
             signaturePad.clear();
+            document.getElementById('signature64').value = '';
         });
 
         document.getElementById('handoverForm').addEventListener('submit', (e) => {
-            if (signaturePad.isEmpty()) {
+            if (signaturePad.isEmpty() && !document.getElementById('signature64').value) {
                 e.preventDefault();
                 alert("Bitte unterschreiben!");
             } else {
-                document.getElementById('signature64').value = signaturePad.toDataURL();
+                // Nur aktualisieren, wenn neu unterschrieben wurde
+                if (!signaturePad.isEmpty()) {
+                    document.getElementById('signature64').value = signaturePad.toDataURL();
+                }
             }
         });
     </script>

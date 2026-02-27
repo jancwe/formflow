@@ -5,5 +5,5 @@ services:
     ports:
       - "8080:5000"
     volumes:
-      - ./pdf_output:/app/pdfs
+      - ./pdf_output:/app/pdfs:Z
     restart: unless-stopped
