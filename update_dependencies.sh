@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Aktuelle Frontend-Versionen (werden vom Skript selbst aktualisiert)
-BOOTSTRAP_VER="5.3.0"
-SIGPAD_VER="4.1.5"
+BOOTSTRAP_VER="5.3.8"
+SIGPAD_VER="5.1.3"
 
 echo "🔍 Prüfe auf Updates für alle Abhängigkeiten (das kann einen Moment dauern)..."
 
