@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @top-right {
+                content: "Seite " counter(page) " von " counter(pages);
+                font-size: 10pt;
+                color: #666;
+            }
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #0056b3;
+        }
+        h1 {
+            font-size: 20pt;
+            color: #0056b3;
+            margin-top: 0;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .info-table th, .info-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        .info-table th {
+            width: 30%;
+            color: #666;
+            font-weight: normal;
+        }
+        .info-table td {
+            font-weight: bold;
+        }
+        .signature-section {
+            margin-top: 50px;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 300px;
+            height: 150px;
+            /* Flexbox wird von WeasyPrint nicht immer perfekt für Bilder unterstützt */
+            text-align: center;
+            position: relative;
+        }
+        .signature-img {
+            /* Absolute Positionierung für robuste Darstellung in WeasyPrint */
+            max-width: 280px;
+            max-height: 130px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .footer {
+            margin-top: 50px;
+            font-size: 9pt;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Unternehmenslogo</div>
+        <div>Datum: {{ date_today }}</div>
+    </div>
+
+    <h1>{{ form_title }}</h1>
+
+    <table class="info-table">
+        {% for field in fields %}
+            {% if field.type != 'signature' %}
+            <tr>
+                <th>{{ field.label }}</th>
+                <td>{{ form_data.get(field.name, '') }}</td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+
+    {% for field in fields %}
+        {% if field.type == 'signature' %}
+        <div class="signature-section">
+            <p><strong>{{ field.label }}:</strong></p>
+            <div class="signature-box">
+                {% if form_data.get(field.name) %}
+                    <img src="{{ form_data.get(field.name) }}" class="signature-img" alt="Unterschrift">
+                {% else %}
+                    <span style="color: #ccc;">Keine Unterschrift</span>
+                {% endif %}
+            </div>
+            <p style="font-size: 10pt; color: #666; margin-top: 5px;">
+                Unterzeichnet von: {{ form_data.get('user', 'Unbekannt') }} am {{ date_today }}
+            </p>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    <div class="footer">
+        Dieses Dokument wurde maschinell erstellt und ist mit der digitalen Unterschrift gültig.
+    </div>
+</body>
+</html>

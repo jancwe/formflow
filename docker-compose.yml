@@ -7,4 +7,5 @@ services:
     volumes:
       - ./pdf_output:/app/pdfs:Z
       - ./forms:/app/forms:Z
+      - ./pdf_templates:/app/pdf_templates:Z
     restart: unless-stopped

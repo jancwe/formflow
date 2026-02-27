@@ -4,7 +4,7 @@ import logging
 import re
 from datetime import date
 from flask import render_template, request, redirect, url_for
-from fpdf import FPDF
+from weasyprint import HTML
 import base64
 import uuid
 import time
@@ -98,12 +98,9 @@ class FormEngine:
                     form_data[field_name] = request.form.get(field_name, '')
             
             # PDF generieren
-            pdf = self._generate_pdf(form_def, form_data)
-            
-            # Eindeutige ID für das temporäre PDF
             file_id = uuid.uuid4().hex
             temp_filename = f"pdfs/temp_{file_id}.pdf"
-            pdf.output(temp_filename)
+            self._generate_pdf(form_def, form_data, temp_filename)
             
             return render_template('preview.html',
                                   uuid=file_id,
@@ -159,48 +156,31 @@ class FormEngine:
             
             return redirect(url_for('show_form', form_id=form_id))
     
-    def _generate_pdf(self, form_def, form_data):
-        """Generiert ein PDF basierend auf der Formulardefinition und den Daten"""
-        pdf = FPDF()
-        pdf.add_page()
+    def _generate_pdf(self, form_def, form_data, output_filename):
+        """Generiert ein PDF basierend auf einem HTML-Template und WeasyPrint"""
         
-        # Titel (aus form_def.title oder form_def.pdf.title für Abwärtskompatibilität)
-        pdf_title = form_def.get('pdf', {}).get('title', form_def.get('title', 'Formular'))
+        # Template-Name aus YAML lesen oder Standard verwenden
+        template_name = form_def.get('pdf_template', 'default_pdf.html')
+        template_path = os.path.join('pdf_templates', template_name)
         
-        pdf.set_font("helvetica", style="B", size=16)
-        pdf.cell(0, 10, text=pdf_title, new_x="LMARGIN", new_y="NEXT", align='C')
-        pdf.ln(10)
-        
-        # Felder direkt aus der 'fields'-Definition lesen
-        pdf.set_font("helvetica", size=12)
-        for field_def in form_def.get('fields', []):
-            field_name = field_def.get('name')
-            field_label = field_def.get('label', field_name)
-            field_type = field_def.get('type', 'text')
+        # Fallback, falls das Template nicht existiert
+        if not os.path.exists(template_path):
+            logger.warning(f"PDF-Template {template_name} nicht gefunden. Verwende default_pdf.html")
+            template_path = os.path.join('pdf_templates', 'default_pdf.html')
             
-            if field_type == 'signature':
-                # Unterschrift
-                pdf.cell(0, 10, text=f"{field_label}:", new_x="LMARGIN", new_y="NEXT")
-                signature_data = form_data.get(field_name, '')
-                
-                if signature_data:
-                    header, encoded = signature_data.split(",", 1)
-                    temp_sig_filename = f"temp_sig_{uuid.uuid4().hex}.png"
-                    with open(temp_sig_filename, "wb") as fh:
-                        fh.write(base64.b64decode(encoded))
-                    # Breite aus der alten pdf-Definition übernehmen, falls vorhanden, sonst Standard 80
-                    width = 80
-                    if 'pdf' in form_def and 'fields' in form_def['pdf']:
-                        for pdf_field in form_def['pdf']['fields']:
-                            if pdf_field.get('field') == field_name:
-                                width = pdf_field.get('width', 80)
-                                break
-                    
-                    pdf.image(temp_sig_filename, x=10, y=pdf.get_y(), w=width)
-                    os.remove(temp_sig_filename)
-            else:
-                # Normales Textfeld, Datum, Select etc.
-                value = form_data.get(field_name, '')
-                pdf.cell(0, 10, text=f"{field_label}: {value}", new_x="LMARGIN", new_y="NEXT")
+        # HTML mit Jinja2 rendern
+        # Da wir nicht im app-Kontext sind, wenn wir render_template mit einem absoluten Pfad aufrufen,
+        # lesen wir die Datei manuell und nutzen Jinja2 direkt
+        from jinja2 import Template
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template = Template(f.read())
+            
+        html_content = template.render(
+            form_title=form_def.get('title', 'Formular'),
+            fields=form_def.get('fields', []),
+            form_data=form_data,
+            date_today=date.today().strftime("%d.%m.%Y")
+        )
         
-        return pdf
+        # HTML zu PDF konvertieren
+        HTML(string=html_content).write_pdf(output_filename)
