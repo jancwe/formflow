@@ -13,11 +13,13 @@ import yaml
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
+from config import settings
+
 class FormEngine:
     def __init__(self, forms_dir: str = 'forms'):
         self.forms_dir = forms_dir
         self.forms: Dict[str, Any] = {}
-        self.config: Dict[str, Any] = self._load_config_from_env()
+        self.config = settings.model_dump()  # Use the loaded settings
         self.pdf_generator = PdfGenerator()
         self._load_forms()
 
@@ -26,31 +28,6 @@ class FormEngine:
         self._register_routes()
 
         
-    def _load_config_from_env(self) -> Dict[str, Any]:
-        """Lädt die globale Konfiguration aus Umgebungsvariablen."""
-        config = {
-            'company': {
-                'name': os.environ.get('APP_COMPANY_NAME', 'Musterfirma GmbH'),
-                'address': os.environ.get('APP_COMPANY_ADDRESS', 'Musterstraße 123 &bull; 12345 Musterstadt'),
-                'logo_filename': os.environ.get('APP_COMPANY_LOGO', 'logo.png')
-            },
-            'colors': {
-                'primary': os.environ.get('APP_COLOR_PRIMARY', '#0056b3'),
-                'text_dark': os.environ.get('APP_COLOR_TEXT_DARK', '#32373c'),
-                'text_light': os.environ.get('APP_COLOR_TEXT_LIGHT', '#6d6d6d'),
-                'bg_light': os.environ.get('APP_COLOR_BG_LIGHT', '#fdfdfd')
-            },
-            'smb': {
-                'enabled': os.environ.get('SMB_ENABLED', 'false').lower() == 'true',
-                'server': os.environ.get('SMB_SERVER'),
-                'share': os.environ.get('SMB_SHARE'),
-                'folder': os.environ.get('SMB_FOLDER'),
-                'username': os.environ.get('SMB_USERNAME'),
-                'password': os.environ.get('SMB_PASSWORD')
-            }
-        }
-        logger.info("Konfiguration aus Umgebungsvariablen geladen.")
-        return config
     
     def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""

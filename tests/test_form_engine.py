@@ -2,14 +2,18 @@ import pytest
 import time
 from form_engine import FormEngine
 
+from config import AppSettings, SmbConfig
+
 @pytest.fixture
 def form_engine(monkeypatch):
     """
     Provides a FormEngine instance with mocked external dependencies to allow for
     isolated unit testing of its helper methods.
     """
-    # Mock methods that read from the filesystem or environment variables
-    monkeypatch.setattr(FormEngine, "_load_config_from_env", lambda self: {})
+    # Mock the settings object to avoid loading from .env in tests
+    # We create a default, empty settings object. Tests that need specific
+    # configurations will provide their own.
+    monkeypatch.setattr("form_engine.settings", AppSettings())
     monkeypatch.setattr(FormEngine, "_load_forms", lambda self: None)
     engine = FormEngine()
     return engine
@@ -47,7 +51,7 @@ def test_generate_filename_parts(form_engine, monkeypatch):
     # Expected: ['my-form', 'Max_Mustermann', 'ITSupport', '1234567890']
     assert parts == ["my-form", "Max_Mustermann", "ITSupport", "1234567890"]
 
-def test_store_pdf_locally(form_engine, monkeypatch, tmp_path, mocker):
+def test_store_pdf_locally(form_engine, mocker, tmp_path):
     """Tests that the PDF is stored locally when SMB is disabled."""
     # Create a dummy temp file
     temp_file = tmp_path / "temp.pdf"
@@ -56,13 +60,15 @@ def test_store_pdf_locally(form_engine, monkeypatch, tmp_path, mocker):
     # Mock os.rename to track its call
     mock_rename = mocker.patch("os.rename")
 
-    form_engine.config = {'smb': {'enabled': False}}
+    # Provide a specific config for this test case
+    form_engine.config = AppSettings(smb=SmbConfig(enabled=False)).model_dump()
+
     form_engine._store_pdf(str(temp_file), "/path/to/final.pdf", [])
 
     # Assert that os.rename was called with the correct arguments
     mock_rename.assert_called_once_with(str(temp_file), "/path/to/final.pdf")
 
-def test_store_pdf_smb_success(form_engine, monkeypatch, tmp_path, mocker):
+def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
     """Tests a successful PDF upload to an SMB share."""
     # Create a dummy temp file
     temp_file = tmp_path / "temp.pdf"
@@ -70,20 +76,20 @@ def test_store_pdf_smb_success(form_engine, monkeypatch, tmp_path, mocker):
 
     # Mock SMB functions
     mock_register = mocker.patch("smbclient.register_session")
-    # Use mock_open to simulate file handling
     m = mocker.mock_open()
     mock_smb_open = mocker.patch("smbclient.open_file", m)
 
-    form_engine.config = {
-        'smb': {
-            'enabled': True,
-            'server': "smb-server",
-            'share': "pdfs",
-            'folder': "forms",
-            'username': "testuser",
-            'password': "testpass"
-        }
-    }
+    # Provide a specific config for this test case
+    smb_config = SmbConfig(
+        enabled=True,
+        server="smb-server",
+        share="pdfs",
+        folder="forms",
+        username="testuser",
+        password="testpass"
+    )
+    form_engine.config = AppSettings(smb=smb_config).model_dump()
+
     filename_parts = ["notebook_handover", "test-user", "12345"]
     form_engine._store_pdf(str(temp_file), "", filename_parts)
 
@@ -102,12 +108,8 @@ def test_store_pdf_smb_missing_config_raises_error(form_engine):
     """
     Tests that a RuntimeError is raised if SMB is enabled but config is incomplete.
     """
-    form_engine.config = {
-        'smb': {
-            'enabled': True,
-            # Missing server, share, etc.
-        }
-    }
+    # Provide a specific incomplete config for this test case
+    form_engine.config = AppSettings(smb=SmbConfig(enabled=True)).model_dump()
 
     with pytest.raises(RuntimeError, match="SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen."):
         form_engine._store_pdf("/dummy/path.pdf", "", [])
