@@ -47,7 +47,7 @@ def test_generate_filename_parts(form_engine, monkeypatch):
     # Expected: ['my-form', 'Max_Mustermann', 'ITSupport', '1234567890']
     assert parts == ["my-form", "Max_Mustermann", "ITSupport", "1234567890"]
 
-def test_store_pdf_locally(form_engine, monkeypatch, tmp_path):
+def test_store_pdf_locally(form_engine, monkeypatch, tmp_path, mocker):
     """Tests that the PDF is stored locally when SMB is disabled."""
     # Create a dummy temp file
     temp_file = tmp_path / "temp.pdf"
@@ -62,7 +62,7 @@ def test_store_pdf_locally(form_engine, monkeypatch, tmp_path):
     # Assert that os.rename was called with the correct arguments
     mock_rename.assert_called_once_with(str(temp_file), "/path/to/final.pdf")
 
-def test_store_pdf_smb_success(form_engine, monkeypatch, tmp_path):
+def test_store_pdf_smb_success(form_engine, monkeypatch, tmp_path, mocker):
     """Tests a successful PDF upload to an SMB share."""
     # Create a dummy temp file
     temp_file = tmp_path / "temp.pdf"
