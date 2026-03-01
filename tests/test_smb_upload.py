@@ -49,8 +49,3 @@ def test_smb_upload():
     time.sleep(2)
     smb_files = os.listdir("smb_data")
     assert any("notebook_handover_test-user" in f for f in smb_files), "PDF-Datei wurde nicht im smb_data-Verzeichnis gefunden."
-
-    # Optional: Bereinigen der erstellten Datei
-    for f in smb_files:
-        if "notebook_handover_test-user" in f:
-            os.remove(os.path.join("smb_data", f))

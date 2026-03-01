@@ -57,4 +57,6 @@ jobs:
 
       - name: Tear down services
         if: always()
-        run: docker-compose -f docker-compose.dev.yml down
+        run: |
+          docker-compose -f docker-compose.dev.yml down
+          sudo rm -rf smb_data
