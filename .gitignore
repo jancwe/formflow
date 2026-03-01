@@ -1,4 +1,8 @@
+.env
 *.pdf
 __pycache__/
 pdf_templates/default_pdf copy.html
 static/logo copy.png
+requirements.txt.bak
+Dockerfile.bak
+frontend-backup.tar.gz

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - smb-server
+      - main
+  pull_request:
+    branches:
+      - smb-server
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install Docker Compose
+        run: sudo apt-get update && sudo apt-get install -y docker-compose
+
+      - name: Create .env file for testing
+        run: cp .env.example .env
+
+      - name: Start services
+        run: docker-compose -f docker-compose.dev.yml up -d
+
+      - name: Wait for services
+        run: |
+          # Wait for the web server to be ready
+          timeout=60
+          while ! curl -s http://localhost:8080 > /dev/null; do
+            timeout=$((timeout-1))
+            if [ $timeout -eq 0 ]; then
+              echo "Error: Timed out waiting for web server."
+              docker-compose logs
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Run tests
+        id: tests
+        run: python -m pytest
+
+      - name: Show logs on failure
+        if: failure() && steps.tests.outcome == 'failure'
+        run: docker-compose logs formflow-app
+
+      - name: Tear down services
+        if: always()
+        run: |
+          docker-compose -f docker-compose.dev.yml down
+          sudo rm -rf smb_data

@@ -4,6 +4,8 @@ services:
     build: .
     ports:
       - "8080:5000"
+    env_file:
+      - .env
     volumes:
       - ./pdf_output:/app/pdfs:Z
       - ./forms:/app/forms:Z

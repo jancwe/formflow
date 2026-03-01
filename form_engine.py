@@ -1,49 +1,50 @@
-import yaml
 import os
 import logging
 import re
 from datetime import date
-from typing import Dict, Any
-from flask import render_template, request, redirect, url_for, Flask
+from typing import Dict, Any, Optional
 import uuid
 import time
+import smbclient
 from pdf_generator import PdfGenerator
+import yaml
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
+from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
+
 class FormEngine:
-    def __init__(self, app: Flask, forms_dir: str = 'forms', config_file: str = 'config.yaml'):
-        self.app = app
+    def __init__(self, forms_dir: str = 'forms', config: Optional[Dict[str, Any]] = None):
         self.forms_dir = forms_dir
-        self.config_file = config_file
+        self._config = config
         self.forms: Dict[str, Any] = {}
-        self.config: Dict[str, Any] = {}
         self.pdf_generator = PdfGenerator()
-        self._load_config()
         self._load_forms()
+
+    @property
+    def config(self) -> Dict[str, Any]:
+        if self._config is not None:
+            return self._config
+        return current_app.config.get("formflow", {})
+
+    @config.setter
+    def config(self, value: Dict[str, Any]) -> None:
+        self._config = value
+
+    def init_app(self, app: Flask):
+        self.app = app
+        # Make sure the pdfs directory exists
+        os.makedirs('pdfs', exist_ok=True)
         self._register_routes()
+
         
-    def _load_config(self) -> None:
-        """Lädt die globale Konfiguration (z.B. CI-Farben, Firmenname)"""
-        if os.path.exists(self.config_file):
-            try:
-                with open(self.config_file, 'r', encoding='utf-8') as file:
-                    self.config = yaml.safe_load(file) or {}
-                logger.info(f"Konfiguration aus {self.config_file} geladen.")
-            except Exception as e:
-                logger.error(f"Fehler beim Laden der Konfiguration: {str(e)}")
-        else:
-            logger.warning(f"Konfigurationsdatei {self.config_file} nicht gefunden. Verwende Standardwerte.")
     
     def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""
         if not os.path.exists(self.forms_dir):
             os.makedirs(self.forms_dir)
             
-        # Formulare bei jedem Aufruf neu laden
-        self.forms = {}
-        
         logger.info(f"Lade Formulare aus Verzeichnis: {self.forms_dir}")
         logger.info(f"Gefundene Dateien: {os.listdir(self.forms_dir)}")
         
@@ -60,15 +61,24 @@ class FormEngine:
                     logger.error(f"Fehler beim Laden von {filename}: {str(e)}")
         
         logger.info(f"Insgesamt {len(self.forms)} Formulare geladen: {list(self.forms.keys())}")
+        print(f"DEBUG: Geladene Formulare: {list(self.forms.keys())}")
     
     def _register_routes(self) -> None:
         """Registriert die Flask-Routen für jedes Formular"""
         
+        @self.app.route('/')
+        def index():
+            """Startseite - Weiterleitung zur Formularliste"""
+            return redirect(url_for('list_forms'))
+
+        @self.app.route('/pdf/<filename>')
+        def serve_pdf(filename):
+            """Stellt PDF-Dateien zur Verfügung"""
+            return send_from_directory('pdfs', filename)
+        
         @self.app.route('/forms')
         def list_forms():
             """Zeigt eine Liste aller verfügbaren Formulare an"""
-            # Formulare neu laden, um Änderungen zu erkennen
-            self._load_forms()
             return render_template('form_list.html', forms=self.forms, app_config=self.config)
         
         @self.app.route('/form/<form_id>', methods=['GET', 'POST'])
@@ -133,43 +143,103 @@ class FormEngine:
                 
             form_def = self.forms[form_id]
             
-            # Dateinamen aus den markierten Feldern generieren
-            filename_parts = [form_id]
-            
-            for field in form_def.get('fields', []):
-                if field.get('in_filename'):
-                    field_name = field.get('name')
-                    value = request.form.get(field_name, '')
-                    if value:
-                        # Ersetze Leerzeichen durch Unterstriche
-                        clean_value = value.replace(' ', '_')
-                        # Entferne alle Zeichen, die nicht alphanumerisch, Bindestrich oder Unterstrich sind
-                        # Das schützt vor problematischen Zeichen in Windows (\ / : * ? " < > |) und Linux
-                        clean_value = re.sub(r'[^a-zA-Z0-9_-]', '', clean_value)
-                        
-                        if clean_value: # Nur hinzufügen, wenn nach der Bereinigung noch etwas übrig ist
-                            filename_parts.append(clean_value)
-            
-            # Zeitstempel anhängen, um Eindeutigkeit zu garantieren
-            filename_parts.append(str(int(time.time())))
-            
+            # Erzeuge Dateiname und speichere das PDF (lokal oder SMB)
+            filename_parts = self._generate_filename_parts(form_id, form_def, request.form)
             temp_filename = f"pdfs/temp_{file_id}.pdf"
             final_filename = f"pdfs/{'_'.join(filename_parts)}.pdf"
-            
-            if os.path.exists(temp_filename):
-                os.rename(temp_filename, final_filename)
-                return render_template('success.html', app_config=self.config)
-            
-            return "Fehler: Temporäre Datei nicht gefunden.", 400
+
+            if not os.path.exists(temp_filename):
+                return "Fehler: Temporäre Datei nicht gefunden.", 400
+
+            try:
+                result = self._store_pdf(temp_filename, final_filename, filename_parts)
+                return render_template('success.html',
+                                       app_config=self.config,
+                                       warning=result.get('warning'),
+                                       filename=result.get('filename'))
+            except Exception as e:
+                logger.exception("Fehler beim Speichern des PDFs")
+                return str(e), 500
         
         @self.app.route('/edit/<form_id>/<file_id>', methods=['POST'])
         def edit_form(form_id: str, file_id: str):
             """Zurück zum Bearbeiten des Formulars"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
-                
+
             temp_filename = f"pdfs/temp_{file_id}.pdf"
             if os.path.exists(temp_filename):
                 os.remove(temp_filename)
-            
+
             return redirect(url_for('show_form', form_id=form_id))
+
+        @self.app.route('/hello')
+        def hello():
+            return "Hello, World!"
+
+    # --- Hilfsfunktionen --------------------------------------------------
+    def _sanitize_for_filename(self, value: str) -> str:
+        """Bereinigt Text, sodass er in einem Dateinamen verwendet werden kann."""
+        clean = value.replace(' ', '_')
+        return re.sub(r'[^a-zA-Z0-9_-]', '', clean)
+
+    def _generate_filename_parts(self, form_id: str, form_def: Dict[str, Any], form_data: Dict[str, Any]) -> list[str]:
+        parts = [form_id]
+        for field in form_def.get('fields', []):
+            if field.get('in_filename'):
+                name = field.get('name')
+                value = form_data.get(name, '')
+                if value:
+                    cleaned = self._sanitize_for_filename(value)
+                    if cleaned:
+                        parts.append(cleaned)
+        parts.append(str(int(time.time())))
+        return parts
+
+    def _store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str]) -> dict:
+        """Speichert ein PDF entweder lokal oder auf dem SMB-Share.
+
+        Wenn SMB deaktiviert ist, wird einfach umbenannt.
+        Bei Netzwerk-Problemen wird lokal gespeichert und eine Warnung zurückgegeben.
+
+        Returns:
+            dict mit 'stored_via' ('smb' oder 'local') und optional 'warning'.
+        """
+        smb_config = self.config.get('smb', {})
+        if not smb_config.get('enabled'):
+            logger.info("SMB ist deaktiviert. Speichere PDF lokal.")
+            os.rename(temp_path, local_final)
+            return {"stored_via": "local", "filename": os.path.basename(local_final)}
+
+        logger.info("SMB ist aktiviert. Versuche Upload.")
+
+        server = smb_config.get('server')
+        share = smb_config.get('share')
+        folder = smb_config.get('folder', '')
+        username = smb_config.get('username')
+        password = smb_config.get('password')
+
+        if not (server and share and username and password):
+            raise RuntimeError("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
+
+        try:
+            smbclient.register_session(server, username=username, password=password)
+            folder_part = f"\\{folder}" if folder else ""
+            remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
+
+            with open(temp_path, 'rb') as local_file:
+                with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                    remote_file.write(local_file.read())
+
+            logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
+            os.remove(temp_path)
+            return {"stored_via": "smb", "filename": os.path.basename(remote_path)}
+        except Exception as e:
+            logger.warning(f"SMB-Upload fehlgeschlagen ({e}). Speichere PDF lokal als Fallback.")
+            os.rename(temp_path, local_final)
+            local_name = os.path.basename(local_final)
+            return {
+                "stored_via": "local",
+                "filename": local_name,
+                "warning": f"Der SMB-Server konnte nicht erreicht werden. Die Datei wurde lokal gespeichert unter: {local_name}"
+            }

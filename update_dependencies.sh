@@ -12,10 +12,15 @@ LATEST_SIGPAD=$(curl -s "https://registry.npmjs.org/signature_pad/latest" | grep
 
 # --- 2. Backend (PyPI) ---
 CUR_FLASK=$(grep -i '^Flask==' requirements.txt | cut -d'=' -f3)
-CUR_FPDF2=$(grep -i '^fpdf2==' requirements.txt | cut -d'=' -f3)
+CUR_WEASYPRINT=$(grep -i '^WeasyPrint==' requirements.txt | cut -d'=' -f3)
+CUR_SMBPROTO=$(grep -i '^smbprotocol==' requirements.txt | cut -d'=' -f3 || true)
+# fpdf2 is no longer used in the project; keep for backwards compatibility check
+CUR_FPDF2=$(grep -i '^fpdf2==' requirements.txt | cut -d'=' -f3 || echo "(nicht installiert)")
 
 LATEST_FLASK=$(curl -s "https://pypi.org/pypi/Flask/json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
-LATEST_FPDF2=$(curl -s "https://pypi.org/pypi/fpdf2/json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+LATEST_WEASYPRINT=$(curl -s "https://pypi.org/pypi/WeasyPrint/json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+LATEST_SMBPROTO=$(curl -s "https://pypi.org/pypi/smbprotocol/json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+# no need to query fpdf2
 
 # --- 3. Docker (Docker Hub) ---
 CUR_PYTHON=$(grep '^FROM python:' Dockerfile | cut -d':' -f2)
@@ -37,7 +42,13 @@ echo "  Signature Pad: $SIGPAD_VER -> $LATEST_SIGPAD"
 echo ""
 echo "🐍 Backend (requirements.txt):"
 echo "  Flask:         $CUR_FLASK -> $LATEST_FLASK"
-echo "  fpdf2:         $CUR_FPDF2 -> $LATEST_FPDF2"
+echo "  WeasyPrint:    $CUR_WEASYPRINT -> $LATEST_WEASYPRINT"
+if [ -n "$CUR_SMBPROTO" ]; then
+  echo "  smbprotocol:   $CUR_SMBPROTO -> $LATEST_SMBPROTO"
+fi
+if [ "$CUR_FPDF2" != "(nicht installiert)" ]; then
+  echo "  fpdf2:         $CUR_FPDF2 -> $LATEST_FPDF2"  # legacy-kompatibel
+fi
 echo ""
 echo "🐳 Docker (Dockerfile):"
 echo "  Python Image:  $CUR_PYTHON -> $LATEST_PYTHON"
@@ -48,7 +59,8 @@ echo ""
 if [ "$BOOTSTRAP_VER" == "$LATEST_BOOTSTRAP" ] && \
    [ "$SIGPAD_VER" == "$LATEST_SIGPAD" ] && \
    [ "$CUR_FLASK" == "$LATEST_FLASK" ] && \
-   [ "$CUR_FPDF2" == "$LATEST_FPDF2" ] && \
+   [ "$CUR_WEASYPRINT" == "$LATEST_WEASYPRINT" ] && \
+   ([ -z "$CUR_SMBPROTO" ] || [ "$CUR_SMBPROTO" == "$LATEST_SMBPROTO" ]) && \
    [ "$CUR_PYTHON" == "$LATEST_PYTHON" ]; then
     echo "✅ Alles ist bereits auf dem neuesten Stand!"
     exit 0
@@ -60,9 +72,21 @@ if [[ $REPLY =~ ^[Jj]$ ]]
 then
     echo "🔄 Aktualisiere Konfigurationsdateien..."
 
+    # Sicherungsdateien anlegen, damit wir bei Buildfehlern zurückrollen können
+    cp requirements.txt requirements.txt.bak
+    cp Dockerfile Dockerfile.bak
+    tar cfz frontend-backup.tar.gz static/css static/js || true
+
     # Update requirements.txt
     sed -i "s/^Flask==.*/Flask==$LATEST_FLASK/" requirements.txt
-    sed -i "s/^fpdf2==.*/fpdf2==$LATEST_FPDF2/" requirements.txt
+    sed -i "s/^WeasyPrint==.*/WeasyPrint==$LATEST_WEASYPRINT/" requirements.txt
+    if grep -q '^smbprotocol==' requirements.txt; then
+        sed -i "s/^smbprotocol==.*/smbprotocol==$LATEST_SMBPROTO/" requirements.txt
+    else
+        echo "smbprotocol==$LATEST_SMBPROTO" >> requirements.txt
+    fi
+    # legacy fpdf2 falls es noch drin steht
+    sed -i "s/^fpdf2==.*/fpdf2==$LATEST_FPDF2/" requirements.txt || true
 
     # Update Dockerfile
     sed -i "s/^FROM python:.*/FROM python:$LATEST_PYTHON/" Dockerfile
@@ -76,9 +100,29 @@ then
     curl -sL "https://cdn.jsdelivr.net/npm/bootstrap@${LATEST_BOOTSTRAP}/dist/css/bootstrap.min.css" -o static/css/bootstrap.min.css
     curl -sL "https://cdn.jsdelivr.net/npm/signature_pad@${LATEST_SIGPAD}/dist/signature_pad.umd.min.js" -o static/js/signature_pad.umd.min.js
 
-    echo "✅ Alle Abhängigkeiten wurden erfolgreich aktualisiert!"
+    echo "🏗️ Baue das Projekt zur Kontrolle..."
+    if command -v podman-compose >/dev/null 2>&1; then
+        podman-compose build || BUILD_FAILED=1
+    else
+        docker-compose build || BUILD_FAILED=1
+    fi
+
+    if [ -n "$BUILD_FAILED" ]; then
+        echo "❌ Build fehlgeschlagen – rolle Änderungen zurück."
+        mv requirements.txt.bak requirements.txt
+        mv Dockerfile.bak Dockerfile
+        [ -f frontend-backup.tar.gz ] && tar xfz frontend-backup.tar.gz
+        exit 1
+    fi
+
+    echo "✅ Alle Abhängigkeiten wurden erfolgreich aktualisiert und Build ist ok!"
     echo "⚠️  WICHTIG: Bitte starte den Container neu, um die Backend- und Docker-Updates anzuwenden:"
+    echo ""
+    echo "   Befehl für podman-compose"
     echo "   podman-compose down && podman-compose up -d --build"
+    echo ""
+    echo "   Analog bei docker-compose"
+    echo "   docker-compose down && docker-compose up -d --build"
 else
     echo "❌ Abbruch. Es wurden keine Änderungen vorgenommen."
 fi

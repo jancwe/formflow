@@ -18,15 +18,48 @@ Die Anwendung generiert aus den eingegebenen Daten automatisch ein professionell
 
 Das Projekt nutzt Docker (bzw. Podman) für ein einfaches Deployment.
 
+### Produktionsumgebung
+
+Für den normalen Betrieb wird die `docker-compose.yml` verwendet. Diese startet nur die `formflow-app`.
+
 ```bash
 # Container bauen und im Hintergrund starten
-podman-compose up -d --build
+docker-compose up -d --build
 
 # Anwendung aufrufen
 # http://localhost:8080
 ```
 
-*Hinweis: Wenn du Änderungen an `app.py`, `form_engine.py` oder den HTML-Templates im `templates/`-Ordner vornimmst, musst du den Container neu bauen (`--build`). Änderungen in `forms/`, `pdf_templates/` oder `config.yaml` werden nach einem einfachen Neustart (`podman-compose restart formflow-app`) oder teilweise sofort wirksam.*
+### Entwicklungsumgebung (mit SMB-Testserver)
+
+Für die lokale Entwicklung gibt es eine `docker-compose.dev.yml`-Datei. Diese startet zusätzlich einen Samba-Testserver, um den PDF-Upload auf einen SMB-Share zu simulieren.
+
+Stelle sicher, dass deine `.env`-Datei die Konfiguration für den Testserver enthält:
+
+```ini
+SMB_ENABLED=true
+SMB_SERVER=smb-server
+SMB_SHARE=pdfs
+SMB_FOLDER=
+SMB_USERNAME=testuser
+SMB_PASSWORD=testpass
+```
+
+**Starten der Entwicklungsumgebung:**
+
+```bash
+# Alle Container der Entwicklungsumgebung starten
+docker-compose -f docker-compose.dev.yml up -d --build
+```
+
+**Stoppen der Entwicklungsumgebung:**
+
+```bash
+# Alle Container der Entwicklungsumgebung stoppen und entfernen
+docker-compose -f docker-compose.dev.yml down
+```
+
+*Hinweis: Wenn du Änderungen an `app.py`, `form_engine.py` oder den HTML-Templates im `templates/`-Ordner vornimmst, musst du den Container neu bauen (`--build`). Änderungen in `forms/`, `pdf_templates/` oder `config.yaml` werden nach einem einfachen Neustart (`docker-compose restart formflow-app`) oder teilweise sofort wirksam.*
 
 ---
 
@@ -51,7 +84,21 @@ colors:
 ---
 
 ## Formulare definieren (`forms/*.yaml`)
+> **Hinweis:** Sensible Werte wie SMB-Zugangsdaten sollten nicht in der Compose- oder
+> Konfigurationsdatei stehen. Lege im einfachsten Fall stattdessen eine `.env`-Datei im Projektverzeichnis an
+> (wird von `docker-compose` automatisch geladen) und definiere dort z. B.:
+> ```ini
+> SMB_ENABLED=true
+> SMB_SERVER=fileserver.domain.local
+> SMB_SHARE=Freigabe
+> SMB_FOLDER=PDFs
+> SMB_USERNAME=meinnutzer
+> SMB_PASSWORD=meinpasswort
+> ```
+> Die Anwendung liest diese Umgebungsvariablen beim Start und übergibt sie an den
+> SMB-Upload.
 
+### Formulare definieren (`forms/*.yaml`)
 Neue Formulare werden einfach als `.yaml`-Datei im Ordner `forms/` abgelegt. Die Anwendung erkennt sie automatisch.
 
 ### Grundstruktur eines Formulars
