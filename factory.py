@@ -19,8 +19,8 @@ def create_app():
             print(f"- {var_name}: {error['msg']}")
         exit(1)
 
-    # Formular-Engine initialisieren und Routen registrieren
-    form_engine = FormEngine()
+    # Formular-Engine initialisieren und Konfiguration übergeben
+    form_engine = FormEngine(config=app.config["formflow"])
     form_engine.init_app(app)
 
     return app

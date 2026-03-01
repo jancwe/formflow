@@ -5,17 +5,14 @@ from form_engine import FormEngine
 from config import AppSettings, SmbConfig
 
 @pytest.fixture
-def form_engine(monkeypatch):
+def form_engine():
     """
-    Provides a FormEngine instance with mocked external dependencies to allow for
-    isolated unit testing of its helper methods.
+    Provides a FormEngine instance with a default (empty) config for unit testing.
+    Tests that need specific configurations can create their own instance.
     """
-    # Mock the settings object to avoid loading from .env in tests
-    # We create a default, empty settings object. Tests that need specific
-    # configurations will provide their own.
-    monkeypatch.setattr("form_engine.settings", AppSettings())
-    monkeypatch.setattr(FormEngine, "_load_forms", lambda self: None)
-    engine = FormEngine()
+    # For most unit tests, an empty config is sufficient
+    config = AppSettings().model_dump()
+    engine = FormEngine(config=config)
     return engine
 
 def test_sanitize_for_filename(form_engine):
