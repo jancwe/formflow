@@ -5,20 +5,6 @@ services:
       - "8080:5000"
     env_file:
       - .env
-    environment:
-      - APP_COMPANY_NAME=${APP_COMPANY_NAME}
-      - APP_COMPANY_ADDRESS=${APP_COMPANY_ADDRESS}
-      - APP_COMPANY_LOGO=${APP_COMPANY_LOGO}
-      - APP_COLOR_PRIMARY=${APP_COLOR_PRIMARY}
-      - APP_COLOR_TEXT_DARK=${APP_COLOR_TEXT_DARK}
-      - APP_COLOR_TEXT_LIGHT=${APP_COLOR_TEXT_LIGHT}
-      - APP_COLOR_BG_LIGHT=${APP_COLOR_BG_LIGHT}
-      - SMB_ENABLED=${SMB_ENABLED:-false}
-      - SMB_SERVER=${SMB_SERVER:-}
-      - SMB_SHARE=${SMB_SHARE:-}
-      - SMB_FOLDER=${SMB_FOLDER:-}
-      - SMB_USERNAME=${SMB_USERNAME:-}
-      - SMB_PASSWORD=${SMB_PASSWORD:-}
     volumes:
       - ./pdf_output:/app/pdfs:Z
       - ./forms:/app/forms:Z
