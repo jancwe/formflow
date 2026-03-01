@@ -134,74 +134,82 @@ class FormEngine:
                 
             form_def = self.forms[form_id]
             
-            # Dateinamen aus den markierten Feldern generieren
-            filename_parts = [form_id]
-            
-            for field in form_def.get('fields', []):
-                if field.get('in_filename'):
-                    field_name = field.get('name')
-                    value = request.form.get(field_name, '')
-                    if value:
-                        # Ersetze Leerzeichen durch Unterstriche
-                        clean_value = value.replace(' ', '_')
-                        # Entferne alle Zeichen, die nicht alphanumerisch, Bindestrich oder Unterstrich sind
-                        # Das schützt vor problematischen Zeichen in Windows (\ / : * ? " < > |) und Linux
-                        clean_value = re.sub(r'[^a-zA-Z0-9_-]', '', clean_value)
-                        
-                        if clean_value: # Nur hinzufügen, wenn nach der Bereinigung noch etwas übrig ist
-                            filename_parts.append(clean_value)
-            
-            # Zeitstempel anhängen, um Eindeutigkeit zu garantieren
-            filename_parts.append(str(int(time.time())))
-            
+            # Erzeuge Dateiname und speichere das PDF (lokal oder SMB)
+            filename_parts = self._generate_filename_parts(form_id, form_def, request.form)
             temp_filename = f"pdfs/temp_{file_id}.pdf"
             final_filename = f"pdfs/{'_'.join(filename_parts)}.pdf"
-            
-            if os.path.exists(temp_filename):
-                smb_config = self.config.get('smb', {})
-                smb_enabled = str(smb_config.get('enabled', 'false')).lower() == 'true' or os.environ.get('SMB_ENABLED', 'false').lower() == 'true'
-                
-                if smb_enabled:
-                    server = os.environ.get('SMB_SERVER') or smb_config.get('server')
-                    share = os.environ.get('SMB_SHARE') or smb_config.get('share')
-                    folder = os.environ.get('SMB_FOLDER') or smb_config.get('folder', '')
-                    username = os.environ.get('SMB_USERNAME') or smb_config.get('username')
-                    password = os.environ.get('SMB_PASSWORD') or smb_config.get('password')
-                    
-                    if server and share and username and password:
-                        try:
-                            smbclient.register_session(server, username=username, password=password)
-                            folder_part = f"\\{folder}" if folder else ""
-                            remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
-                            
-                            with open(temp_filename, 'rb') as local_file:
-                                with smbclient.open_file(remote_path, mode='wb') as remote_file:
-                                    remote_file.write(local_file.read())
-                                    
-                            logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
-                            os.remove(temp_filename)
-                            return render_template('success.html', app_config=self.config)
-                        except Exception as e:
-                            logger.error(f"Fehler beim SMB-Upload: {str(e)}")
-                            return f"Fehler beim Speichern auf dem Netzlaufwerk: {str(e)}", 500
-                    else:
-                        logger.error("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
-                        return "Server-Konfigurationsfehler (SMB unvollständig)", 500
-                else:
-                    # Fallback: Lokales Speichern
-                    os.rename(temp_filename, final_filename)
-                    return render_template('success.html', app_config=self.config)
-            
-            return "Fehler: Temporäre Datei nicht gefunden.", 400
+
+            if not os.path.exists(temp_filename):
+                return "Fehler: Temporäre Datei nicht gefunden.", 400
+
+            try:
+                # SMB-Logik ist ausgelagert, Methode behandelt Fallback selbst
+                self._store_pdf(temp_filename, final_filename, filename_parts)
+                return render_template('success.html', app_config=self.config)
+            except Exception as e:
+                logger.exception("Fehler beim Speichern des PDFs")
+                return str(e), 500
         
         @self.app.route('/edit/<form_id>/<file_id>', methods=['POST'])
         def edit_form(form_id: str, file_id: str):
             """Zurück zum Bearbeiten des Formulars"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
-                
+
             temp_filename = f"pdfs/temp_{file_id}.pdf"
             if os.path.exists(temp_filename):
                 os.remove(temp_filename)
-            
+
             return redirect(url_for('show_form', form_id=form_id))
+
+    # --- Hilfsfunktionen --------------------------------------------------
+    def _sanitize_for_filename(self, value: str) -> str:
+        """Bereinigt Text, sodass er in einem Dateinamen verwendet werden kann."""
+        clean = value.replace(' ', '_')
+        return re.sub(r'[^a-zA-Z0-9_-]', '', clean)
+
+    def _generate_filename_parts(self, form_id: str, form_def: Dict[str, Any], form_data: Dict[str, Any]) -> list[str]:
+        parts = [form_id]
+        for field in form_def.get('fields', []):
+            if field.get('in_filename'):
+                name = field.get('name')
+                value = form_data.get(name, '')
+                if value:
+                    cleaned = self._sanitize_for_filename(value)
+                    if cleaned:
+                        parts.append(cleaned)
+        parts.append(str(int(time.time())))
+        return parts
+
+    def _store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str]) -> None:
+        """Speichert ein PDF entweder lokal oder auf dem SMB-Share.
+
+        Wenn SMB deaktiviert ist, wird einfach umbenannt. Bei Netzwerk-Problemen
+        wird eine Exception geworfen.
+        """
+        smb_config = self.config.get('smb', {})
+        smb_enabled = str(smb_config.get('enabled', 'false')).lower() == 'true' or os.environ.get('SMB_ENABLED', 'false').lower() == 'true'
+
+        if not smb_enabled:
+            os.rename(temp_path, local_final)
+            return
+
+        server = os.environ.get('SMB_SERVER') or smb_config.get('server')
+        share = os.environ.get('SMB_SHARE') or smb_config.get('share')
+        folder = os.environ.get('SMB_FOLDER') or smb_config.get('folder', '')
+        username = os.environ.get('SMB_USERNAME') or smb_config.get('username')
+        password = os.environ.get('SMB_PASSWORD') or smb_config.get('password')
+
+        if not (server and share and username and password):
+            raise RuntimeError("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
+
+        smbclient.register_session(server, username=username, password=password)
+        folder_part = f"\\{folder}" if folder else ""
+        remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
+
+        with open(temp_path, 'rb') as local_file:
+            with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                remote_file.write(local_file.read())
+
+        logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
+        os.remove(temp_path)
