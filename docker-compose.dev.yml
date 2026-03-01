@@ -7,6 +7,13 @@ services:
     env_file:
       - .env
     environment:
+      - APP_COMPANY_NAME=${APP_COMPANY_NAME}
+      - APP_COMPANY_ADDRESS=${APP_COMPANY_ADDRESS}
+      - APP_COMPANY_LOGO=${APP_COMPANY_LOGO}
+      - APP_COLOR_PRIMARY=${APP_COLOR_PRIMARY}
+      - APP_COLOR_TEXT_DARK=${APP_COLOR_TEXT_DARK}
+      - APP_COLOR_TEXT_LIGHT=${APP_COLOR_TEXT_LIGHT}
+      - APP_COLOR_BG_LIGHT=${APP_COLOR_BG_LIGHT}
       - SMB_ENABLED=${SMB_ENABLED:-false}
       - SMB_SERVER=${SMB_SERVER:-}
       - SMB_SHARE=${SMB_SHARE:-}
@@ -18,4 +25,32 @@ services:
       - ./forms:/app/forms:Z
       - ./pdf_templates:/app/pdf_templates:Z
       - ./static:/app/static:Z
+    restart: unless-stopped
+    depends_on:
+      - smb-server
+
+  smb-server:
+    image: dperson/samba
+    # ports:
+    #   - "139:139"
+    #   - "445:445"
+    environment:
+      - USER=testuser;testpass
+      - SHARE=pdfs;/share;yes;no;yes;testuser
+    volumes:
+      - ./smb_data:/share:Z
+    restart: unless-stopped
+    depends_on:
+      - smb-server
+
+  smb-server:
+    image: dperson/samba
+    # ports:
+    #   - "139:139"
+    #   - "445:445"
+    environment:
+      - USER=testuser;testpass
+      - SHARE=pdfs;/share;yes;no;yes;testuser
+    volumes:
+      - ./smb_data:/share:Z
     restart: unless-stopped

@@ -1,4 +1,3 @@
-import yaml
 import os
 import logging
 import re
@@ -14,28 +13,40 @@ from pdf_generator import PdfGenerator
 logger = logging.getLogger(__name__)
 
 class FormEngine:
-    def __init__(self, app: Flask, forms_dir: str = 'forms', config_file: str = 'config.yaml'):
+    def __init__(self, app: Flask, forms_dir: str = 'forms'):
         self.app = app
         self.forms_dir = forms_dir
-        self.config_file = config_file
         self.forms: Dict[str, Any] = {}
-        self.config: Dict[str, Any] = {}
+        self.config: Dict[str, Any] = self._load_config_from_env()
         self.pdf_generator = PdfGenerator()
-        self._load_config()
         self._load_forms()
         self._register_routes()
         
-    def _load_config(self) -> None:
-        """Lädt die globale Konfiguration (z.B. CI-Farben, Firmenname)"""
-        if os.path.exists(self.config_file):
-            try:
-                with open(self.config_file, 'r', encoding='utf-8') as file:
-                    self.config = yaml.safe_load(file) or {}
-                logger.info(f"Konfiguration aus {self.config_file} geladen.")
-            except Exception as e:
-                logger.error(f"Fehler beim Laden der Konfiguration: {str(e)}")
-        else:
-            logger.warning(f"Konfigurationsdatei {self.config_file} nicht gefunden. Verwende Standardwerte.")
+    def _load_config_from_env(self) -> Dict[str, Any]:
+        """Lädt die globale Konfiguration aus Umgebungsvariablen."""
+        config = {
+            'company': {
+                'name': os.environ.get('APP_COMPANY_NAME', 'Musterfirma GmbH'),
+                'address': os.environ.get('APP_COMPANY_ADDRESS', 'Musterstraße 123 &bull; 12345 Musterstadt'),
+                'logo_filename': os.environ.get('APP_COMPANY_LOGO', 'logo.png')
+            },
+            'colors': {
+                'primary': os.environ.get('APP_COLOR_PRIMARY', '#0056b3'),
+                'text_dark': os.environ.get('APP_COLOR_TEXT_DARK', '#32373c'),
+                'text_light': os.environ.get('APP_COLOR_TEXT_LIGHT', '#6d6d6d'),
+                'bg_light': os.environ.get('APP_COLOR_BG_LIGHT', '#fdfdfd')
+            },
+            'smb': {
+                'enabled': os.environ.get('SMB_ENABLED', 'false').lower() == 'true',
+                'server': os.environ.get('SMB_SERVER'),
+                'share': os.environ.get('SMB_SHARE'),
+                'folder': os.environ.get('SMB_FOLDER'),
+                'username': os.environ.get('SMB_USERNAME'),
+                'password': os.environ.get('SMB_PASSWORD')
+            }
+        }
+        logger.info("Konfiguration aus Umgebungsvariablen geladen.")
+        return config
     
     def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""
@@ -188,17 +199,15 @@ class FormEngine:
         wird eine Exception geworfen.
         """
         smb_config = self.config.get('smb', {})
-        smb_enabled = str(smb_config.get('enabled', 'false')).lower() == 'true' or os.environ.get('SMB_ENABLED', 'false').lower() == 'true'
-
-        if not smb_enabled:
+        if not smb_config.get('enabled'):
             os.rename(temp_path, local_final)
             return
 
-        server = os.environ.get('SMB_SERVER') or smb_config.get('server')
-        share = os.environ.get('SMB_SHARE') or smb_config.get('share')
-        folder = os.environ.get('SMB_FOLDER') or smb_config.get('folder', '')
-        username = os.environ.get('SMB_USERNAME') or smb_config.get('username')
-        password = os.environ.get('SMB_PASSWORD') or smb_config.get('password')
+        server = smb_config.get('server')
+        share = smb_config.get('share')
+        folder = smb_config.get('folder', '')
+        username = smb_config.get('username')
+        password = smb_config.get('password')
 
         if not (server and share and username and password):
             raise RuntimeError("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
