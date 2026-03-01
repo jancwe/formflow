@@ -4,6 +4,8 @@ services:
     build: .
     ports:
       - "8080:5000"
+    env_file:
+      - .env
     environment:
       - SMB_ENABLED=${SMB_ENABLED:-false}
       - SMB_SERVER=${SMB_SERVER:-}

@@ -51,7 +51,21 @@ colors:
 ---
 
 ## Formulare definieren (`forms/*.yaml`)
+> **Hinweis:** Sensible Werte wie SMB-Zugangsdaten sollten nicht in der Compose- oder
+> Konfigurationsdatei stehen. Lege im einfachsten Fall stattdessen eine `.env`-Datei im Projektverzeichnis an
+> (wird von `docker-compose` automatisch geladen) und definiere dort z. B.:
+> ```ini
+> SMB_ENABLED=true
+> SMB_SERVER=fileserver.domain.local
+> SMB_SHARE=Freigabe
+> SMB_FOLDER=PDFs
+> SMB_USERNAME=meinnutzer
+> SMB_PASSWORD=meinpasswort
+> ```
+> Die Anwendung liest diese Umgebungsvariablen beim Start und übergibt sie an den
+> SMB-Upload.
 
+### Formulare definieren (`forms/*.yaml`)
 Neue Formulare werden einfach als `.yaml`-Datei im Ordner `forms/` abgelegt. Die Anwendung erkennt sie automatisch.
 
 ### Grundstruktur eines Formulars

@@ -1,3 +1,4 @@
+.env
 *.pdf
 __pycache__/
 pdf_templates/default_pdf copy.html
