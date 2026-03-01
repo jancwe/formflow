@@ -191,8 +191,11 @@ class FormEngine:
         """
         smb_config = self.config.get('smb', {})
         if not smb_config.get('enabled'):
+            logger.info("SMB ist deaktiviert. Speichere PDF lokal.")
             os.rename(temp_path, local_final)
             return
+
+        logger.info("SMB ist aktiviert. Versuche Upload.")
 
         server = smb_config.get('server')
         share = smb_config.get('share')
