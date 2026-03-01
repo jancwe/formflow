@@ -44,7 +44,16 @@ def test_smb_upload(development_environment):
     assert file_id, "Konnte die file_id nicht aus der Vorschau-Antwort extrahieren."
 
     # 2. Bestätigung senden
-    confirm_response = requests.post(f"http://localhost:8080/confirm/notebook_handover/{file_id}")
+    confirm_response = requests.post(
+        f"http://localhost:8080/confirm/notebook_handover/{file_id}",
+        data={
+            "user": "test-user",
+            "handover_date": "2026-03-01",
+            "condition": "Neuwertig",
+            "accessories": "Netzteil",
+            "signature_employee": "Test Signature"
+        }
+    )
     assert confirm_response.status_code == 200
 
     # 3. Überprüfen, ob die Datei im smb_data-Verzeichnis existiert
