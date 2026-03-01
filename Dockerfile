@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Installiere Systemabhängigkeiten für WeasyPrint (Pango, Cairo, etc.)
 RUN apt-get update && apt-get install -y \
+    build-essential \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libjpeg-dev \
