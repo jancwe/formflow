@@ -48,7 +48,12 @@ jobs:
           done
 
       - name: Run tests
+        id: tests
         run: python -m pytest
+
+      - name: Show logs on failure
+        if: failure() && steps.tests.outcome == 'failure'
+        run: docker-compose logs formflow-app
 
       - name: Tear down services
         if: always()
