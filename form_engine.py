@@ -7,6 +7,7 @@ from typing import Dict, Any
 from flask import render_template, request, redirect, url_for, Flask
 import uuid
 import time
+import smbclient
 from pdf_generator import PdfGenerator
 
 # Logger konfigurieren
@@ -157,8 +158,39 @@ class FormEngine:
             final_filename = f"pdfs/{'_'.join(filename_parts)}.pdf"
             
             if os.path.exists(temp_filename):
-                os.rename(temp_filename, final_filename)
-                return render_template('success.html', app_config=self.config)
+                smb_config = self.config.get('smb', {})
+                smb_enabled = str(smb_config.get('enabled', 'false')).lower() == 'true' or os.environ.get('SMB_ENABLED', 'false').lower() == 'true'
+                
+                if smb_enabled:
+                    server = os.environ.get('SMB_SERVER') or smb_config.get('server')
+                    share = os.environ.get('SMB_SHARE') or smb_config.get('share')
+                    folder = os.environ.get('SMB_FOLDER') or smb_config.get('folder', '')
+                    username = os.environ.get('SMB_USERNAME') or smb_config.get('username')
+                    password = os.environ.get('SMB_PASSWORD') or smb_config.get('password')
+                    
+                    if server and share and username and password:
+                        try:
+                            smbclient.register_session(server, username=username, password=password)
+                            folder_part = f"\\{folder}" if folder else ""
+                            remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
+                            
+                            with open(temp_filename, 'rb') as local_file:
+                                with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                                    remote_file.write(local_file.read())
+                                    
+                            logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
+                            os.remove(temp_filename)
+                            return render_template('success.html', app_config=self.config)
+                        except Exception as e:
+                            logger.error(f"Fehler beim SMB-Upload: {str(e)}")
+                            return f"Fehler beim Speichern auf dem Netzlaufwerk: {str(e)}", 500
+                    else:
+                        logger.error("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
+                        return "Server-Konfigurationsfehler (SMB unvollständig)", 500
+                else:
+                    # Fallback: Lokales Speichern
+                    os.rename(temp_filename, final_filename)
+                    return render_template('success.html', app_config=self.config)
             
             return "Fehler: Temporäre Datei nicht gefunden.", 400
         
