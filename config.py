@@ -2,23 +2,23 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class SmbConfig(BaseModel):
-    enabled: bool
-    server: str
-    share: str
-    folder: str
-    username: str
-    password: str
+    enabled: bool = False
+    server: str = ""
+    share: str = ""
+    folder: str = ""
+    username: str = ""
+    password: str = ""
 
 class CompanyConfig(BaseModel):
-    name: str
-    address: str
-    logo_filename: str
+    name: str = ""
+    address: str = ""
+    logo_filename: str = ""
 
 class ColorsConfig(BaseModel):
-    primary: str
-    text_dark: str
-    text_light: str
-    bg_light: str
+    primary: str = ""
+    text_dark: str = ""
+    text_light: str = ""
+    bg_light: str = ""
 
 class AppSettings(BaseSettings):
     """Main application settings model, loaded from environment variables."""
@@ -30,6 +30,6 @@ class AppSettings(BaseSettings):
         extra='ignore'
     )
 
-    company: CompanyConfig
-    colors: ColorsConfig
-    smb: SmbConfig
+    company: CompanyConfig = Field(default_factory=CompanyConfig)
+    colors: ColorsConfig = Field(default_factory=ColorsConfig)
+    smb: SmbConfig = Field(default_factory=SmbConfig)
