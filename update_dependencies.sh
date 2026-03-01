@@ -72,6 +72,11 @@ if [[ $REPLY =~ ^[Jj]$ ]]
 then
     echo "🔄 Aktualisiere Konfigurationsdateien..."
 
+    # Sicherungsdateien anlegen, damit wir bei Buildfehlern zurückrollen können
+    cp requirements.txt requirements.txt.bak
+    cp Dockerfile Dockerfile.bak
+    tar cfz frontend-backup.tar.gz static/css static/js || true
+
     # Update requirements.txt
     sed -i "s/^Flask==.*/Flask==$LATEST_FLASK/" requirements.txt
     sed -i "s/^WeasyPrint==.*/WeasyPrint==$LATEST_WEASYPRINT/" requirements.txt
@@ -95,9 +100,29 @@ then
     curl -sL "https://cdn.jsdelivr.net/npm/bootstrap@${LATEST_BOOTSTRAP}/dist/css/bootstrap.min.css" -o static/css/bootstrap.min.css
     curl -sL "https://cdn.jsdelivr.net/npm/signature_pad@${LATEST_SIGPAD}/dist/signature_pad.umd.min.js" -o static/js/signature_pad.umd.min.js
 
-    echo "✅ Alle Abhängigkeiten wurden erfolgreich aktualisiert!"
+    echo "🏗️ Baue das Projekt zur Kontrolle..."
+    if command -v podman-compose >/dev/null 2>&1; then
+        podman-compose build || BUILD_FAILED=1
+    else
+        docker-compose build || BUILD_FAILED=1
+    fi
+
+    if [ -n "$BUILD_FAILED" ]; then
+        echo "❌ Build fehlgeschlagen – rolle Änderungen zurück."
+        mv requirements.txt.bak requirements.txt
+        mv Dockerfile.bak Dockerfile
+        [ -f frontend-backup.tar.gz ] && tar xfz frontend-backup.tar.gz
+        exit 1
+    fi
+
+    echo "✅ Alle Abhängigkeiten wurden erfolgreich aktualisiert und Build ist ok!"
     echo "⚠️  WICHTIG: Bitte starte den Container neu, um die Backend- und Docker-Updates anzuwenden:"
+    echo ""
+    echo "   Befehl für podman-compose"
     echo "   podman-compose down && podman-compose up -d --build"
+    echo ""
+    echo "   Analog bei docker-compose"
+    echo "   docker-compose down && docker-compose up -d --build"
 else
     echo "❌ Abbruch. Es wurden keine Änderungen vorgenommen."
 fi
