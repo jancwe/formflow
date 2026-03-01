@@ -15,16 +15,23 @@ logger = logging.getLogger(__name__)
 
 from config import settings
 
+from flask import current_app
+
 class FormEngine:
     def __init__(self, forms_dir: str = 'forms'):
         self.forms_dir = forms_dir
         self.forms: Dict[str, Any] = {}
-        self.config = settings.model_dump()  # Use the loaded settings
         self.pdf_generator = PdfGenerator()
         self._load_forms()
 
+    @property
+    def config(self) -> Dict[str, Any]:
+        return current_app.config.get("formflow", {})
+
     def init_app(self, app: Flask):
         self.app = app
+        # Make sure the pdfs directory exists
+        os.makedirs('pdfs', exist_ok=True)
         self._register_routes()
 
         

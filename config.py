@@ -28,5 +28,3 @@ class AppSettings(BaseSettings):
     colors: ColorsConfig = Field(default_factory=ColorsConfig)
     smb: SmbConfig = Field(default_factory=SmbConfig)
 
-# Singleton instance to be used across the application
-settings = AppSettings()
