@@ -2,8 +2,7 @@ import os
 import logging
 import re
 from datetime import date
-from typing import Dict, Any
-from flask import render_template, request, redirect, url_for, Flask, send_from_directory
+from typing import Dict, Any, Optional
 import uuid
 import time
 import smbclient
@@ -13,20 +12,25 @@ import yaml
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
-
-
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
 
 class FormEngine:
-    def __init__(self, forms_dir: str = 'forms'):
+    def __init__(self, forms_dir: str = 'forms', config: Optional[Dict[str, Any]] = None):
         self.forms_dir = forms_dir
+        self._config = config
         self.forms: Dict[str, Any] = {}
         self.pdf_generator = PdfGenerator()
         self._load_forms()
 
     @property
     def config(self) -> Dict[str, Any]:
+        if self._config is not None:
+            return self._config
         return current_app.config.get("formflow", {})
+
+    @config.setter
+    def config(self, value: Dict[str, Any]) -> None:
+        self._config = value
 
     def init_app(self, app: Flask):
         self.app = app

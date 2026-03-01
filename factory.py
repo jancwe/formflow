@@ -20,7 +20,7 @@ def create_app():
         exit(1)
 
     # Formular-Engine initialisieren und Konfiguration übergeben
-    form_engine = FormEngine(config=app.config["formflow"])
+    form_engine = FormEngine()
     form_engine.init_app(app)
 
     return app
