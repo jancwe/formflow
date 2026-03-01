@@ -18,12 +18,15 @@ logger = logging.getLogger(__name__)
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
 
 class FormEngine:
-    def __init__(self, config, forms_dir: str = 'forms'):
+    def __init__(self, forms_dir: str = 'forms'):
         self.forms_dir = forms_dir
         self.forms: Dict[str, Any] = {}
-        self.config = config
         self.pdf_generator = PdfGenerator()
         self._load_forms()
+
+    @property
+    def config(self) -> Dict[str, Any]:
+        return current_app.config.get("formflow", {})
 
     def init_app(self, app: Flask):
         self.app = app
