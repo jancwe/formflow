@@ -13,7 +13,7 @@ import yaml
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
-from config import settings
+
 
 from flask import current_app
 
