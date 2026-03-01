@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   formflow-app:
     build: .
@@ -35,20 +34,8 @@ services:
     #   - "139:139"
     #   - "445:445"
     environment:
-      - USER=testuser;testpass
-      - SHARE=pdfs;/share;yes;no;yes;testuser
-    volumes:
-      - ./smb_data:/share:Z
-    restart: unless-stopped
-    depends_on:
-      - smb-server
-
-  smb-server:
-    image: dperson/samba
-    # ports:
-    #   - "139:139"
-    #   - "445:445"
-    environment:
+      - USERID=0
+      - GROUPID=0
       - USER=testuser;testpass
       - SHARE=pdfs;/share;yes;no;yes;testuser
     volumes:

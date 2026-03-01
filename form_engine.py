@@ -8,19 +8,23 @@ import uuid
 import time
 import smbclient
 from pdf_generator import PdfGenerator
+import yaml
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
 class FormEngine:
-    def __init__(self, app: Flask, forms_dir: str = 'forms'):
-        self.app = app
+    def __init__(self, forms_dir: str = 'forms'):
         self.forms_dir = forms_dir
         self.forms: Dict[str, Any] = {}
         self.config: Dict[str, Any] = self._load_config_from_env()
         self.pdf_generator = PdfGenerator()
         self._load_forms()
+
+    def init_app(self, app: Flask):
+        self.app = app
         self._register_routes()
+
         
     def _load_config_from_env(self) -> Dict[str, Any]:
         """Lädt die globale Konfiguration aus Umgebungsvariablen."""
@@ -53,9 +57,6 @@ class FormEngine:
         if not os.path.exists(self.forms_dir):
             os.makedirs(self.forms_dir)
             
-        # Formulare bei jedem Aufruf neu laden
-        self.forms = {}
-        
         logger.info(f"Lade Formulare aus Verzeichnis: {self.forms_dir}")
         logger.info(f"Gefundene Dateien: {os.listdir(self.forms_dir)}")
         
@@ -72,15 +73,24 @@ class FormEngine:
                     logger.error(f"Fehler beim Laden von {filename}: {str(e)}")
         
         logger.info(f"Insgesamt {len(self.forms)} Formulare geladen: {list(self.forms.keys())}")
+        print(f"DEBUG: Geladene Formulare: {list(self.forms.keys())}")
     
     def _register_routes(self) -> None:
         """Registriert die Flask-Routen für jedes Formular"""
         
+        @self.app.route('/')
+        def index():
+            """Startseite - Weiterleitung zur Formularliste"""
+            return redirect(url_for('list_forms'))
+
+        @self.app.route('/pdf/<filename>')
+        def serve_pdf(filename):
+            """Stellt PDF-Dateien zur Verfügung"""
+            return send_from_directory('pdfs', filename)
+        
         @self.app.route('/forms')
         def list_forms():
             """Zeigt eine Liste aller verfügbaren Formulare an"""
-            # Formulare neu laden, um Änderungen zu erkennen
-            self._load_forms()
             return render_template('form_list.html', forms=self.forms, app_config=self.config)
         
         @self.app.route('/form/<form_id>', methods=['GET', 'POST'])
@@ -172,6 +182,10 @@ class FormEngine:
                 os.remove(temp_filename)
 
             return redirect(url_for('show_form', form_id=form_id))
+
+        @self.app.route('/hello')
+        def hello():
+            return "Hello, World!"
 
     # --- Hilfsfunktionen --------------------------------------------------
     def _sanitize_for_filename(self, value: str) -> str:
