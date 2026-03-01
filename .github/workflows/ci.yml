@@ -5,6 +5,10 @@ on:
     branches:
       - smb-server
       - main
+  pull_request:
+    branches:
+      - smb-server
+      - main
 
 jobs:
   test:
