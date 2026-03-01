@@ -32,4 +32,7 @@ jobs:
 
       - name: Run tests
         run: |
+          set -a
+          source .env
+          set +a
           python -m pytest
