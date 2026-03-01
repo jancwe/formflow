@@ -46,3 +46,68 @@ def test_generate_filename_parts(form_engine, monkeypatch):
 
     # Expected: ['my-form', 'Max_Mustermann', 'ITSupport', '1234567890']
     assert parts == ["my-form", "Max_Mustermann", "ITSupport", "1234567890"]
+
+def test_store_pdf_locally(form_engine, monkeypatch, tmp_path):
+    """Tests that the PDF is stored locally when SMB is disabled."""
+    # Create a dummy temp file
+    temp_file = tmp_path / "temp.pdf"
+    temp_file.touch()
+
+    # Mock os.rename to track its call
+    mock_rename = mocker.patch("os.rename")
+
+    form_engine.config = {'smb': {'enabled': False}}
+    form_engine._store_pdf(str(temp_file), "/path/to/final.pdf", [])
+
+    # Assert that os.rename was called with the correct arguments
+    mock_rename.assert_called_once_with(str(temp_file), "/path/to/final.pdf")
+
+def test_store_pdf_smb_success(form_engine, monkeypatch, tmp_path):
+    """Tests a successful PDF upload to an SMB share."""
+    # Create a dummy temp file
+    temp_file = tmp_path / "temp.pdf"
+    temp_file.write_text("PDF content")
+
+    # Mock SMB functions
+    mock_register = mocker.patch("smbclient.register_session")
+    # Use mock_open to simulate file handling
+    m = mocker.mock_open()
+    mock_smb_open = mocker.patch("smbclient.open_file", m)
+
+    form_engine.config = {
+        'smb': {
+            'enabled': True,
+            'server': "smb-server",
+            'share': "pdfs",
+            'folder': "forms",
+            'username': "testuser",
+            'password': "testpass"
+        }
+    }
+    filename_parts = ["notebook_handover", "test-user", "12345"]
+    form_engine._store_pdf(str(temp_file), "", filename_parts)
+
+    # Assert that the session was registered
+    mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
+
+    # Assert that the file was opened on the SMB share with the correct path
+    expected_path = r"\\smb-server\pdfs\forms\notebook_handover_test-user_12345.pdf"
+    mock_smb_open.assert_called_once_with(expected_path, mode='wb')
+
+    # Assert that content was written
+    handle = m()
+    handle.write.assert_called_once_with(b"PDF content")
+
+def test_store_pdf_smb_missing_config_raises_error(form_engine):
+    """
+    Tests that a RuntimeError is raised if SMB is enabled but config is incomplete.
+    """
+    form_engine.config = {
+        'smb': {
+            'enabled': True,
+            # Missing server, share, etc.
+        }
+    }
+
+    with pytest.raises(RuntimeError, match="SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen."):
+        form_engine._store_pdf("/dummy/path.pdf", "", [])
