@@ -152,9 +152,11 @@ class FormEngine:
                 return "Fehler: Temporäre Datei nicht gefunden.", 400
 
             try:
-                # SMB-Logik ist ausgelagert, Methode behandelt Fallback selbst
-                self._store_pdf(temp_filename, final_filename, filename_parts)
-                return render_template('success.html', app_config=self.config)
+                result = self._store_pdf(temp_filename, final_filename, filename_parts)
+                return render_template('success.html',
+                                       app_config=self.config,
+                                       warning=result.get('warning'),
+                                       filename=result.get('filename'))
             except Exception as e:
                 logger.exception("Fehler beim Speichern des PDFs")
                 return str(e), 500
@@ -194,17 +196,20 @@ class FormEngine:
         parts.append(str(int(time.time())))
         return parts
 
-    def _store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str]) -> None:
+    def _store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str]) -> dict:
         """Speichert ein PDF entweder lokal oder auf dem SMB-Share.
 
-        Wenn SMB deaktiviert ist, wird einfach umbenannt. Bei Netzwerk-Problemen
-        wird eine Exception geworfen.
+        Wenn SMB deaktiviert ist, wird einfach umbenannt.
+        Bei Netzwerk-Problemen wird lokal gespeichert und eine Warnung zurückgegeben.
+
+        Returns:
+            dict mit 'stored_via' ('smb' oder 'local') und optional 'warning'.
         """
         smb_config = self.config.get('smb', {})
         if not smb_config.get('enabled'):
             logger.info("SMB ist deaktiviert. Speichere PDF lokal.")
             os.rename(temp_path, local_final)
-            return
+            return {"stored_via": "local", "filename": os.path.basename(local_final)}
 
         logger.info("SMB ist aktiviert. Versuche Upload.")
 
@@ -217,13 +222,24 @@ class FormEngine:
         if not (server and share and username and password):
             raise RuntimeError("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
 
-        smbclient.register_session(server, username=username, password=password)
-        folder_part = f"\\{folder}" if folder else ""
-        remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
+        try:
+            smbclient.register_session(server, username=username, password=password)
+            folder_part = f"\\{folder}" if folder else ""
+            remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
 
-        with open(temp_path, 'rb') as local_file:
-            with smbclient.open_file(remote_path, mode='wb') as remote_file:
-                remote_file.write(local_file.read())
+            with open(temp_path, 'rb') as local_file:
+                with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                    remote_file.write(local_file.read())
 
-        logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
-        os.remove(temp_path)
+            logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
+            os.remove(temp_path)
+            return {"stored_via": "smb", "filename": os.path.basename(remote_path)}
+        except Exception as e:
+            logger.warning(f"SMB-Upload fehlgeschlagen ({e}). Speichere PDF lokal als Fallback.")
+            os.rename(temp_path, local_final)
+            local_name = os.path.basename(local_final)
+            return {
+                "stored_via": "local",
+                "filename": local_name,
+                "warning": f"Der SMB-Server konnte nicht erreicht werden. Die Datei wurde lokal gespeichert unter: {local_name}"
+            }

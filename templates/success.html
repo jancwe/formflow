@@ -8,7 +8,12 @@
 <div class="card text-center">
     <div class="card-body py-5">
         <h3 class="card-title text-success mb-4">Erfolgreich gespeichert!</h3>
-        <p class="card-text mb-4">Das Dokument wurde erfolgreich als PDF auf dem Server abgelegt. Das Fenster kann geschlossen werden.</p>
+        {% if warning %}
+        <div class="alert alert-warning text-start" role="alert">
+            <strong>Hinweis:</strong> {{ warning }}
+        </div>
+        {% endif %}
+        <p class="card-text mb-4">Das Dokument wurde erfolgreich als PDF gespeichert. Das Fenster kann geschlossen werden.</p>
         <a href="/" class="btn btn-primary">Zurück zur Übersicht</a>
     </div>
 </div>

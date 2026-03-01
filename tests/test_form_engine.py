@@ -60,10 +60,12 @@ def test_store_pdf_locally(form_engine, mocker, tmp_path):
     # Provide a specific config for this test case
     form_engine.config = AppSettings(smb=SmbConfig(enabled=False)).model_dump()
 
-    form_engine._store_pdf(str(temp_file), "/path/to/final.pdf", [])
+    result = form_engine._store_pdf(str(temp_file), "/path/to/final.pdf", [])
 
     # Assert that os.rename was called with the correct arguments
     mock_rename.assert_called_once_with(str(temp_file), "/path/to/final.pdf")
+    assert result["stored_via"] == "local"
+    assert result["filename"] == "final.pdf"
 
 def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
     """Tests a successful PDF upload to an SMB share."""
@@ -88,7 +90,7 @@ def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
     form_engine.config = AppSettings(smb=smb_config).model_dump()
 
     filename_parts = ["notebook_handover", "test-user", "12345"]
-    form_engine._store_pdf(str(temp_file), "", filename_parts)
+    result = form_engine._store_pdf(str(temp_file), "", filename_parts)
 
     # Assert that the session was registered
     mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
@@ -101,6 +103,8 @@ def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
     handle = m()
     handle.write.assert_called_once_with(b"PDF content")
 
+    assert result["stored_via"] == "smb"
+
 def test_store_pdf_smb_missing_config_raises_error(form_engine):
     """
     Tests that a RuntimeError is raised if SMB is enabled but config is incomplete.
@@ -110,3 +114,30 @@ def test_store_pdf_smb_missing_config_raises_error(form_engine):
 
     with pytest.raises(RuntimeError, match="SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen."):
         form_engine._store_pdf("/dummy/path.pdf", "", [])
+
+def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_path):
+    """Tests that a failed SMB upload falls back to local storage with a warning."""
+    temp_file = tmp_path / "temp.pdf"
+    temp_file.write_text("PDF content")
+
+    # Mock SMB to raise a connection error
+    mocker.patch("smbclient.register_session", side_effect=ConnectionError("Connection refused"))
+    mock_rename = mocker.patch("os.rename")
+
+    smb_config = SmbConfig(
+        enabled=True,
+        server="smb-server",
+        share="pdfs",
+        folder="forms",
+        username="testuser",
+        password="testpass"
+    )
+    form_engine.config = AppSettings(smb=smb_config).model_dump()
+
+    result = form_engine._store_pdf(str(temp_file), "/path/to/fallback.pdf", ["test"])
+
+    mock_rename.assert_called_once_with(str(temp_file), "/path/to/fallback.pdf")
+    assert result["stored_via"] == "local"
+    assert "warning" in result
+    assert "SMB-Server" in result["warning"]
+    assert "fallback.pdf" in result["warning"]
