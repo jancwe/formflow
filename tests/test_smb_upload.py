@@ -6,33 +6,8 @@ import requests
 
 import shutil
 
-# Hilfsfunktion, um den verfügbaren Compose-Befehl zu finden
-def get_compose_command():
-    if shutil.which("podman-compose"):
-        return "podman-compose"
-    elif shutil.which("docker-compose"):
-        return "docker-compose"
-    else:
-        pytest.skip("Kein Compose-Tool (podman-compose oder docker-compose) gefunden.")
-
-# Fixture, um die Entwicklungsumgebung zu starten und zu stoppen
-@pytest.fixture(scope="module")
-def development_environment():
-    """Startet die Entwicklungsumgebung vor den Tests und stoppt sie danach."""
-    compose_command = get_compose_command()
-    
-    # Umgebung starten
-    subprocess.run([compose_command, "-f", "docker-compose.dev.yml", "up", "-d", "--build"], check=True)
-    # Wartezeit, um sicherzustellen, dass die Container vollständig gestartet sind
-    time.sleep(10)
-
-    yield
-
-    # Umgebung stoppen
-    subprocess.run([compose_command, "-f", "docker-compose.dev.yml", "down"], check=True)
-
 # Integrationstest für den SMB-Upload
-def test_smb_upload(development_environment):
+def test_smb_upload():
     """Testet den gesamten Prozess vom Ausfüllen des Formulars bis zum SMB-Upload."""
     # 1. Vorschau anfordern und file_id extrahieren
     preview_response = requests.post(

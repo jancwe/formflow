@@ -30,9 +30,26 @@ jobs:
       - name: Create .env file for testing
         run: cp .env.example .env
 
-      - name: Run tests
+      - name: Start services
+        run: docker-compose -f docker-compose.dev.yml up -d
+
+      - name: Wait for services
         run: |
-          set -a
-          source .env
-          set +a
-          python -m pytest
+          # Wait for the web server to be ready
+          timeout=60
+          while ! curl -s http://localhost:8080 > /dev/null; do
+            timeout=$((timeout-1))
+            if [ $timeout -eq 0 ]; then
+              echo "Error: Timed out waiting for web server."
+              docker-compose logs
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Tear down services
+        if: always()
+        run: docker-compose -f docker-compose.dev.yml down
