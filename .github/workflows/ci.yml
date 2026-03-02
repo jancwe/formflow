@@ -5,6 +5,11 @@ on:
     branches:
       - smb-server
       - main
+  # Damit Copilot-PRs automatisch ohne manuelle Freigabe laufen, muss in den
+  # Repository-Settings unter Actions → General die Option
+  # "Approval for running fork pull request workflows from contributors"
+  # auf "Require approval for first-time contributors who are new to GitHub" gesetzt sein.
+  # Copilot muss einmalig manuell freigegeben werden, danach läuft CI automatisch.
   pull_request:
     branches:
       - smb-server
