@@ -11,6 +11,12 @@ on:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  issues: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -70,3 +76,53 @@ jobs:
         run: |
           docker-compose -f docker-compose.dev.yml down
           sudo rm -rf smb_data
+
+      - name: Collect job logs for AI analysis
+        id: collect-logs
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+            const job = jobs.jobs.find(j => j.name === 'test');
+            if (!job) { core.setOutput('logs', 'Keine Logs verfügbar.'); return; }
+            const logsResponse = await github.rest.actions.downloadJobLogsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              job_id: job.id,
+            });
+            // Truncate to 8000 chars to stay within AI model context/token limits
+            const logs = logsResponse.data.substring(0, 8000);
+            core.setOutput('logs', logs);
+
+      - name: AI failure analysis
+        id: ai-analysis
+        if: failure()
+        uses: actions/ai-inference@v1
+        with:
+          model: gpt-4o-mini
+          prompt: |
+            Ein CI-Job ist fehlgeschlagen. Hier sind die Logs:
+
+            ${{ steps.collect-logs.outputs.logs }}
+
+            Bitte analysiere die Ursache des Fehlschlags und gib konkrete Lösungsvorschläge auf Deutsch.
+
+      - name: Post AI analysis as PR comment
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          AI_ANALYSIS: ${{ steps.ai-analysis.outputs.response }}
+        with:
+          script: |
+            const analysis = process.env.AI_ANALYSIS || 'Keine Analyse verfügbar.';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 KI-Fehleranalyse\n\n${analysis}`,
+            });
