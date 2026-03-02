@@ -3,5 +3,5 @@ PyYAML==6.0.1
 gunicorn==25.1.0
 WeasyPrint==68.1
 smbprotocol==1.16.0
-pydantic==2.8.2
+pydantic==2.12.5
 pydantic-settings==2.13.1
