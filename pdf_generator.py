@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import date
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from weasyprint import HTML
 from jinja2 import Template
 
@@ -13,7 +13,7 @@ class PdfGenerator:
     def __init__(self, templates_dir: str = 'pdf_templates'):
         self.templates_dir = templates_dir
 
-    def generate(self, form_def: Dict[str, Any], form_data: Dict[str, Any], output_filename: str, config: Dict[str, Any] = None) -> None:
+    def generate(self, form_def: Dict[str, Any], form_data: Dict[str, Any], output_filename: str, config: Optional[Dict[str, Any]] = None) -> None:
         """
         Generiert ein PDF basierend auf einem HTML-Template und WeasyPrint.
         

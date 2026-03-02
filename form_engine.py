@@ -1,18 +1,17 @@
 import os
 import logging
 import re
+import time
+import yaml
 from datetime import date
 from typing import Dict, Any, Optional
 import uuid
-import time
 import smbclient
+from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
 from pdf_generator import PdfGenerator
-import yaml
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
-
-from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
 
 class FormEngine:
     def __init__(self, forms_dir: str = 'forms', config: Optional[Dict[str, Any]] = None):
@@ -61,7 +60,6 @@ class FormEngine:
                     logger.error(f"Fehler beim Laden von {filename}: {str(e)}")
         
         logger.info(f"Insgesamt {len(self.forms)} Formulare geladen: {list(self.forms.keys())}")
-        print(f"DEBUG: Geladene Formulare: {list(self.forms.keys())}")
     
     def _register_routes(self) -> None:
         """Registriert die Flask-Routen für jedes Formular"""
@@ -157,9 +155,9 @@ class FormEngine:
                                        app_config=self.config,
                                        warning=result.get('warning'),
                                        filename=result.get('filename'))
-            except Exception as e:
+            except Exception:
                 logger.exception("Fehler beim Speichern des PDFs")
-                return str(e), 500
+                return "Interner Serverfehler beim Speichern des PDFs.", 500
         
         @self.app.route('/edit/<form_id>/<file_id>', methods=['POST'])
         def edit_form(form_id: str, file_id: str):
@@ -172,10 +170,6 @@ class FormEngine:
                 os.remove(temp_filename)
 
             return redirect(url_for('show_form', form_id=form_id))
-
-        @self.app.route('/hello')
-        def hello():
-            return "Hello, World!"
 
     # --- Hilfsfunktionen --------------------------------------------------
     def _sanitize_for_filename(self, value: str) -> str:
