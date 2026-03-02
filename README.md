@@ -103,6 +103,13 @@ colors:
 ### Formulare definieren (`forms/*.yaml`)
 Neue Formulare werden einfach als `.yaml`-Datei im Ordner `forms/` abgelegt. Die Anwendung erkennt sie automatisch.
 
+> **Hinweis:** Die Dateien in `forms/` (direkt, nicht in Unterverzeichnissen) werden **nicht** im Repository versioniert, damit in der Produktion individuelle Anpassungen möglich sind, ohne bei `git pull` Konflikte zu erzeugen.
+>
+> Beispiel-Vorlagen liegen unter `forms/examples/`. Zum Einrichten einfach die gewünschten Dateien nach `forms/` kopieren:
+> ```bash
+> cp forms/examples/*.yaml forms/
+> ```
+
 ### Grundstruktur eines Formulars
 
 ```yaml
