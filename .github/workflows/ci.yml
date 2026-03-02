@@ -12,7 +12,9 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pull-requests: write
+  issues: write
 
 jobs:
   test:
