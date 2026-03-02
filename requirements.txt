@@ -4,4 +4,4 @@ gunicorn==21.2.0
 WeasyPrint==68.1
 smbprotocol==1.16.0
 pydantic==2.8.2
-pydantic-settings==2.3.4
+pydantic-settings==2.13.1
