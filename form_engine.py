@@ -46,9 +46,9 @@ class FormEngine:
             os.makedirs(self.forms_dir)
             
         logger.info(f"Lade Formulare aus Verzeichnis: {self.forms_dir}")
-        logger.info(f"Gefundene Dateien: {os.listdir(self.forms_dir)}")
+        logger.info(f"Gefundene Dateien: {sorted(os.listdir(self.forms_dir))}")
         
-        for filename in os.listdir(self.forms_dir):
+        for filename in sorted(os.listdir(self.forms_dir)):
             if filename.endswith('.yaml') or filename.endswith('.yml'):
                 form_path = os.path.join(self.forms_dir, filename)
                 try:
