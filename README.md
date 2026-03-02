@@ -30,6 +30,8 @@ docker-compose up -d --build
 # http://localhost:8080
 ```
 
+> **Hinweis:** Der Host-Port kann über die Variable `APP_HOST_PORT` in der `.env`-Datei konfiguriert werden (Standard: `8080`). Beispiel: `APP_HOST_PORT=9090`
+
 ### Entwicklungsumgebung (mit SMB-Testserver)
 
 Für die lokale Entwicklung gibt es eine `docker-compose.dev.yml`-Datei. Diese startet zusätzlich einen Samba-Testserver, um den PDF-Upload auf einen SMB-Share zu simulieren.
