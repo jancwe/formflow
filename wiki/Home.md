@@ -33,7 +33,7 @@ docker-compose up -d --build
 # http://localhost:8080
 ```
 
-Weitere Installations- und Konfigurationshinweise finden sich in der [README](../README.md).
+Weitere Installations- und Konfigurationshinweise finden sich in der README-Datei des Haupt-Repositories (siehe Projekt-Hauptseite).
 
 ---
 
