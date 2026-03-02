@@ -46,6 +46,9 @@ jobs:
       - name: Create .env file for testing
         run: cp .env.example .env
 
+      - name: Setup forms for testing
+        run: cp forms/examples/*.yaml forms/
+
       - name: Start services
         run: docker-compose -f docker-compose.dev.yml up -d
 
