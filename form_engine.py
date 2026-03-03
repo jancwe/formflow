@@ -6,7 +6,6 @@ import uuid
 from datetime import date
 from typing import Dict, Any, Optional
 import yaml
-import smbclient
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
 from pdf_generator import PdfGenerator
 
@@ -205,6 +204,9 @@ class FormEngine:
             logger.info("SMB ist deaktiviert. Speichere PDF lokal.")
             os.rename(temp_path, local_final)
             return {"stored_via": "local", "filename": os.path.basename(local_final)}
+
+        # Lazy import: only load smbprotocol when SMB is actually used
+        import smbclient  # noqa: PLC0415
 
         logger.info("SMB ist aktiviert. Versuche Upload.")
 
