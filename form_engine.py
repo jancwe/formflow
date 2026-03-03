@@ -1,6 +1,7 @@
 import os
 import logging
 import re
+import shutil
 import time
 import uuid
 from datetime import date
@@ -224,7 +225,8 @@ class FormEngine:
 
             with open(temp_path, 'rb') as local_file:
                 with smbclient.open_file(remote_path, mode='wb') as remote_file:
-                    remote_file.write(local_file.read())
+                    # Chunked transfer to avoid loading the entire PDF into RAM at once
+                    shutil.copyfileobj(local_file, remote_file, length=65536)
 
             logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
             os.remove(temp_path)
