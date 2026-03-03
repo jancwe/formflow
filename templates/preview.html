@@ -5,11 +5,22 @@
 {% block container_width %}800px{% endblock %}
 
 {% block extra_css %}
-.pdf-preview {
-    width: 100%;
-    height: 600px;
+.pdf-viewer-container {
     border: 1px solid #ccc;
     border-radius: 5px;
+    background: #fff;
+    padding: 12px;
+    text-align: center;
+}
+.pdf-viewer-container canvas {
+    max-width: 100%;
+    height: auto;
+}
+.pdf-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 {% endblock %}
 
@@ -17,9 +28,21 @@
 <div class="card">
     <div class="card-body">
         <h3 class="card-title mb-4">Vorschau: Formular</h3>
-        
+
         <div class="mb-4">
-            <iframe src="/pdf/temp_{{ uuid }}.pdf" class="pdf-preview"></iframe>
+            <div id="pdf-viewer-container" class="pdf-viewer-container">
+                <div id="pdf-loading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Lädt...</span>
+                    </div>
+                </div>
+                <canvas id="pdf-canvas" data-pdf-url="/pdf/temp_{{ uuid }}.pdf" style="display:none;"></canvas>
+                <div id="pdf-nav" class="pdf-nav mt-2" style="display:none;">
+                    <button id="pdf-prev" class="btn btn-outline-secondary btn-sm" disabled>&lsaquo; Zurück</button>
+                    <span id="pdf-page-info" class="mx-2 text-muted small"></span>
+                    <button id="pdf-next" class="btn btn-outline-secondary btn-sm">Weiter &rsaquo;</button>
+                </div>
+            </div>
         </div>
 
         <div class="d-flex justify-content-between">
@@ -51,4 +74,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pdf_viewer.js') }}"></script>
 {% endblock %}
