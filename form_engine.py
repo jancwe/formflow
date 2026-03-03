@@ -121,18 +121,7 @@ class FormEngine:
                 return "Formular nicht gefunden", 404
                 
             form_def = self.forms[form_id]
-            form_data: Dict[str, Any] = {}
-            
-            # Formulardaten sammeln
-            for field in form_def.get('fields', []):
-                field_name = field.get('name')
-                
-                # Bei 'select' mit 'multiple: true' müssen wir getlist() verwenden
-                if field.get('type') == 'select' and field.get('multiple'):
-                    selected_options = request.form.getlist(field_name)
-                    form_data[field_name] = ", ".join(selected_options)
-                else:
-                    form_data[field_name] = request.form.get(field_name, '')
+            form_data = collect_form_data(form_def, request.form)
             
             # PDF generieren
             file_id = uuid.uuid4().hex

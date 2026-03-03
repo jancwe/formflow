@@ -19,6 +19,7 @@ class ColorsConfig(BaseModel):
     text_dark: str = ""
     text_light: str = ""
     bg_light: str = ""
+    bg_gray: str = ""
 
 class AppSettings(BaseSettings):
     """Main application settings model, loaded from environment variables."""

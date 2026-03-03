@@ -2,7 +2,7 @@ import pytest
 import time
 from form_engine import FormEngine
 
-from config import AppSettings, SmbConfig
+from config import AppSettings, ColorsConfig, SmbConfig
 
 @pytest.fixture
 def form_engine():
@@ -290,3 +290,12 @@ def test_store_pdf_smb_flag_reset_on_fallback(form_engine, mocker, tmp_path):
 
     # Flag should remain False so the next call re-attempts registration
     assert form_engine._smb_session_registered is False
+
+def test_colors_config_includes_bg_gray():
+    """Tests that ColorsConfig includes the bg_gray field used by templates."""
+    colors = ColorsConfig(bg_gray="#f8f8f8")
+    assert colors.bg_gray == "#f8f8f8"
+
+    settings = AppSettings(colors=ColorsConfig(bg_gray="#eee"))
+    dumped = settings.model_dump()
+    assert dumped["colors"]["bg_gray"] == "#eee"
