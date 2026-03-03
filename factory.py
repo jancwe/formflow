@@ -2,9 +2,11 @@ from flask import Flask
 from form_engine import FormEngine
 from pydantic import ValidationError
 from config import AppSettings
+from _version import __version__
 
 def create_app():
     app = Flask(__name__)
+    app.config["VERSION"] = __version__
 
     try:
         # Load settings from environment and store them in the app config

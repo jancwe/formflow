@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+LABEL org.opencontainers.image.version="0.1.0"
+LABEL org.opencontainers.image.title="formflow"
+LABEL org.opencontainers.image.description="Dynamischer Formular- & PDF-Generator"
+
 WORKDIR /app
 
 # Installiere Systemabhängigkeiten für WeasyPrint (Pango, Cairo, etc.)
