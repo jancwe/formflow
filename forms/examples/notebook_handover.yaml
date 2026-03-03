@@ -9,6 +9,7 @@ fields:
     required: true
     placeholder: Vollständiger Name des Benutzers
     in_filename: true
+    in_draft_title: true
 
   - type: text
     name: notebook
@@ -16,6 +17,7 @@ fields:
     required: true
     placeholder: z.B. ThinkPad X1 Carbon
     in_filename: true
+    in_draft_title: true
 
   - type: text
     name: service_tag

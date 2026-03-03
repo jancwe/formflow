@@ -102,7 +102,7 @@ def test_list_drafts_returns_empty_for_empty_dir(drafts_dir):
 
 def test_list_drafts_resolves_form_title(drafts_dir):
     """list_drafts resolves form_title from the forms dict."""
-    forms = {"my_form": {"title": "Mein Formular"}}
+    forms = {"my_form": {"title": "Mein Formular", "fields": []}}
     save_draft(drafts_dir, "my_form", {"field": "val"})
 
     drafts = list_drafts(drafts_dir, forms)
@@ -121,6 +121,58 @@ def test_list_drafts_uses_form_id_as_fallback_title(drafts_dir):
     drafts = list_drafts(drafts_dir, {})
 
     assert drafts[0]["form_title"] == "unknown_form"
+
+
+def test_list_drafts_draft_subtitle_from_in_draft_title_fields(drafts_dir):
+    """list_drafts builds draft_subtitle from fields that have in_draft_title: true."""
+    forms = {
+        "handover": {
+            "title": "Übergabe",
+            "fields": [
+                {"name": "user", "in_draft_title": True},
+                {"name": "notebook", "in_draft_title": True},
+                {"name": "service_tag"},  # not in draft title
+            ],
+        }
+    }
+    save_draft(drafts_dir, "handover", {"user": "Max Mustermann", "notebook": "ThinkPad", "service_tag": "ABC123"})
+
+    drafts = list_drafts(drafts_dir, forms)
+
+    assert drafts[0]["draft_subtitle"] == "Max Mustermann, ThinkPad"
+
+
+def test_list_drafts_draft_subtitle_empty_when_no_in_draft_title_fields(drafts_dir):
+    """draft_subtitle is an empty string when no fields have in_draft_title: true."""
+    forms = {
+        "my_form": {
+            "title": "Formular",
+            "fields": [{"name": "name"}, {"name": "date"}],
+        }
+    }
+    save_draft(drafts_dir, "my_form", {"name": "Max", "date": "2026-01-01"})
+
+    drafts = list_drafts(drafts_dir, forms)
+
+    assert drafts[0]["draft_subtitle"] == ""
+
+
+def test_list_drafts_draft_subtitle_skips_empty_values(drafts_dir):
+    """draft_subtitle omits fields whose saved value is empty or missing."""
+    forms = {
+        "my_form": {
+            "title": "Formular",
+            "fields": [
+                {"name": "user", "in_draft_title": True},
+                {"name": "dept", "in_draft_title": True},
+            ],
+        }
+    }
+    save_draft(drafts_dir, "my_form", {"user": "Erika", "dept": ""})
+
+    drafts = list_drafts(drafts_dir, forms)
+
+    assert drafts[0]["draft_subtitle"] == "Erika"
 
 
 def test_list_drafts_sorted_newest_first(drafts_dir):

@@ -18,7 +18,7 @@ SIMPLE_FORM = {
     "title": "Testformular",
     "submit_button": "Vorschau anzeigen",
     "fields": [
-        {"type": "text", "name": "name", "label": "Name", "required": False, "placeholder": ""},
+        {"type": "text", "name": "name", "label": "Name", "required": False, "placeholder": "", "in_draft_title": True},
         {"type": "date", "name": "date", "label": "Datum", "required": False},
         {
             "type": "signature",
@@ -247,3 +247,24 @@ class TestListFormsWithDrafts:
 
         assert f"/draft/{draft_id}/delete" in html
         assert "Löschen" in html
+
+    def test_list_forms_shows_draft_subtitle(self, client, tmp_path):
+        """GET /forms shows field values for in_draft_title fields as the subtitle."""
+        drafts_dir = str(tmp_path / "drafts")
+        save_draft(drafts_dir, "test_form", {"name": "Max Mustermann", "date": "2026-01-01"})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert "Max Mustermann" in html
+
+    def test_list_forms_no_subtitle_when_field_empty(self, client, tmp_path):
+        """GET /forms does not show a subtitle when in_draft_title field has no value."""
+        drafts_dir = str(tmp_path / "drafts")
+        save_draft(drafts_dir, "test_form", {"name": "", "date": "2026-01-01"})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        # The subtitle span should not be rendered (empty string is falsy in Jinja2)
+        assert "fw-semibold" not in html

@@ -60,10 +60,17 @@ def list_drafts(drafts_dir: str, forms: dict) -> list:
             with open(path, 'r', encoding='utf-8') as f:
                 draft = json.load(f)
             form_def = forms.get(draft.get('form_id'), {})
+            form_data = draft.get('form_data', {})
+            subtitle_parts = [
+                form_data[field['name']]
+                for field in form_def.get('fields', [])
+                if field.get('in_draft_title') and form_data.get(field['name'])
+            ]
             drafts.append({
                 "draft_id": draft.get('draft_id'),
                 "form_id": draft.get('form_id'),
                 "form_title": form_def.get('title', draft.get('form_id', '')),
+                "draft_subtitle": ", ".join(subtitle_parts),
                 "saved_at": draft.get('saved_at'),
             })
         except (OSError, json.JSONDecodeError) as e:
