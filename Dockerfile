@@ -19,6 +19,9 @@ COPY . .
 EXPOSE 5000
 
 # Verwende Gunicorn als Produktions-WSGI-Server
-# -w 4: 4 Worker-Prozesse (gut für parallele Anfragen)
+# -w 2: 2 Worker-Prozesse – sinnvoll für Low-Traffic-Intranet-Apps.
+#        Jeder Worker lädt WeasyPrint (~150-300 MB), daher bewusst gering halten.
+#        Für höheren Durchsatz: Wert auf (2 * CPU-Kerne + 1) erhöhen.
+# --timeout 120: WeasyPrint-Rendering kann bei komplexen Templates >30s dauern.
 # -b 0.0.0.0:5000: Binde an alle Interfaces auf Port 5000
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "-w", "2", "--timeout", "120", "-b", "0.0.0.0:5000", "app:app"]

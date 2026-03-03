@@ -141,3 +141,152 @@ def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_pat
     assert "warning" in result
     assert "SMB-Server" in result["warning"]
     assert "fallback.pdf" in result["warning"]
+
+def test_cleanup_temp_files_removes_old_files(form_engine, tmp_path, monkeypatch):
+    """Tests that _cleanup_temp_files removes temp files older than the threshold."""
+    monkeypatch.chdir(tmp_path)
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir()
+
+    old_file = pdfs_dir / "temp_old.pdf"
+    old_file.touch()
+    recent_file = pdfs_dir / "temp_recent.pdf"
+    recent_file.touch()
+    non_temp_file = pdfs_dir / "final_doc.pdf"
+    non_temp_file.touch()
+
+    now = 1000000.0
+    # old_file is 2 hours old, recent_file is 30 minutes old
+    monkeypatch.setattr("os.path.getmtime", lambda path: now - 7200 if "old" in path else now - 1800)
+    monkeypatch.setattr(time, "time", lambda: now)
+
+    form_engine._cleanup_temp_files(max_age_seconds=3600)
+
+    assert not old_file.exists()
+    assert recent_file.exists()
+    assert non_temp_file.exists()
+
+def test_cleanup_temp_files_keeps_young_files(form_engine, tmp_path, monkeypatch):
+    """Tests that _cleanup_temp_files does not remove files newer than the threshold."""
+    monkeypatch.chdir(tmp_path)
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir()
+
+    young_file = pdfs_dir / "temp_young.pdf"
+    young_file.touch()
+
+    now = 1000000.0
+    monkeypatch.setattr("os.path.getmtime", lambda path: now - 60)
+    monkeypatch.setattr(time, "time", lambda: now)
+
+    form_engine._cleanup_temp_files(max_age_seconds=3600)
+
+    assert young_file.exists()
+
+def test_cleanup_temp_files_handles_oserror(form_engine, tmp_path, monkeypatch, caplog):
+    """Tests that _cleanup_temp_files logs a warning and continues on OSError."""
+    import logging
+    monkeypatch.chdir(tmp_path)
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir()
+
+    error_file = pdfs_dir / "temp_error.pdf"
+    error_file.touch()
+
+    now = 1000000.0
+    monkeypatch.setattr("os.path.getmtime", lambda path: now - 7200)
+    monkeypatch.setattr(time, "time", lambda: now)
+    def raise_oserror(path):
+        raise OSError("Permission denied")
+
+    monkeypatch.setattr("os.remove", raise_oserror)
+
+    with caplog.at_level(logging.WARNING):
+        form_engine._cleanup_temp_files(max_age_seconds=3600)
+
+    assert any("Konnte temp-Datei nicht löschen" in r.message for r in caplog.records)
+def test_store_pdf_smb_session_reused(form_engine, mocker, tmp_path):
+    """Tests that the SMB session is registered only once across multiple uploads."""
+    smb_config = SmbConfig(
+        enabled=True,
+        server="smb-server",
+        share="pdfs",
+        folder="",
+        username="testuser",
+        password="testpass"
+    )
+    form_engine.config = AppSettings(smb=smb_config).model_dump()
+
+    mock_register = mocker.patch("smbclient.register_session")
+    m = mocker.mock_open()
+    mocker.patch("smbclient.open_file", m)
+
+    for i in range(3):
+        temp_file = tmp_path / f"temp{i}.pdf"
+        temp_file.write_text("PDF content")
+        form_engine._store_pdf(str(temp_file), "", [f"file{i}"])
+
+    # register_session should only be called once regardless of upload count
+    mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
+
+def test_store_pdf_smb_reregisters_on_session_expiry(form_engine, mocker, tmp_path):
+    """Tests that an expired session is re-registered once and the upload retried."""
+    temp_file = tmp_path / "temp.pdf"
+    temp_file.write_text("PDF content")
+
+    smb_config = SmbConfig(
+        enabled=True,
+        server="smb-server",
+        share="pdfs",
+        folder="",
+        username="testuser",
+        password="testpass"
+    )
+    form_engine.config = AppSettings(smb=smb_config).model_dump()
+
+    # Simulate a session that is already registered
+    form_engine._smb_session_registered = True
+
+    mock_register = mocker.patch("smbclient.register_session")
+    m = mocker.mock_open()
+    # First open_file call raises (simulating expired session), second succeeds
+    mock_smb_open = mocker.patch(
+        "smbclient.open_file",
+        side_effect=[OSError("Session expired"), m.return_value]
+    )
+    m.return_value.__enter__ = lambda s: s
+    m.return_value.__exit__ = mocker.Mock(return_value=False)
+    m.return_value.write = mocker.Mock()
+
+    mocker.patch("os.remove")
+
+    result = form_engine._store_pdf(str(temp_file), "", ["refile"])
+
+    # register_session should have been called once (for re-registration)
+    mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
+    assert form_engine._smb_session_registered is True
+    assert result["stored_via"] == "smb"
+
+def test_store_pdf_smb_flag_reset_on_fallback(form_engine, mocker, tmp_path):
+    """Tests that _smb_session_registered is reset to False after a failed upload."""
+    temp_file = tmp_path / "temp.pdf"
+    temp_file.write_text("PDF content")
+
+    smb_config = SmbConfig(
+        enabled=True,
+        server="smb-server",
+        share="pdfs",
+        folder="",
+        username="testuser",
+        password="testpass"
+    )
+    form_engine.config = AppSettings(smb=smb_config).model_dump()
+
+    mocker.patch("smbclient.register_session", side_effect=ConnectionError("refused"))
+    mocker.patch("os.rename")
+
+    assert form_engine._smb_session_registered is False
+    form_engine._store_pdf(str(temp_file), "/fallback.pdf", ["f"])
+
+    # Flag should remain False so the next call re-attempts registration
+    assert form_engine._smb_session_registered is False
