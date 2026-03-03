@@ -39,12 +39,12 @@ Für die lokale Entwicklung gibt es eine `docker-compose.dev.yml`-Datei. Diese s
 Stelle sicher, dass deine `.env`-Datei die Konfiguration für den Testserver enthält:
 
 ```ini
-SMB_ENABLED=true
-SMB_SERVER=smb-server
-SMB_SHARE=pdfs
-SMB_FOLDER=
-SMB_USERNAME=testuser
-SMB_PASSWORD=testpass
+APP_SMB__ENABLED=true
+APP_SMB__SERVER=smb-server
+APP_SMB__SHARE=pdfs
+APP_SMB__FOLDER=
+APP_SMB__USERNAME=testuser
+APP_SMB__PASSWORD=testpass
 ```
 
 **Starten der Entwicklungsumgebung:**
@@ -61,46 +61,45 @@ docker-compose -f docker-compose.dev.yml up -d --build
 docker-compose -f docker-compose.dev.yml down
 ```
 
-*Hinweis: Wenn du Änderungen an `app.py`, `form_engine.py` oder den HTML-Templates im `templates/`-Ordner vornimmst, musst du den Container neu bauen (`--build`). Änderungen in `forms/`, `pdf_templates/` oder `config.yaml` werden nach einem einfachen Neustart (`docker-compose restart formflow-app`) oder teilweise sofort wirksam.*
+*Hinweis: Wenn du Änderungen an `app.py`, `form_engine.py` oder den HTML-Templates im `templates/`-Ordner vornimmst, musst du den Container neu bauen (`--build`). Änderungen in `forms/`, `pdf_templates/` oder `.env` werden nach einem einfachen Neustart (`docker-compose restart formflow-app`) oder teilweise sofort wirksam.*
 
 ---
 
-## Konfiguration (`config.yaml`)
+## Konfiguration (Umgebungsvariablen / `.env`)
 
-Die Datei `config.yaml` im Hauptverzeichnis steuert das globale Aussehen der Web-App und der generierten PDFs.
+Die gesamte Konfiguration erfolgt über **Umgebungsvariablen** (optional aus einer `.env`-Datei im Projektverzeichnis, die von `docker-compose` automatisch geladen wird). [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) validiert und typisiert die Werte beim Start.
 
-```yaml
-company:
-  name: "Musterfirma GmbH"
-  address: "Musterstraße 123 &bull; 12345 Musterstadt"
-  logo_filename: "logo.png" # Muss im Ordner static/ liegen
+Eine Vorlage mit allen verfügbaren Variablen liegt in `.env.example`.
 
-colors:
-  primary: "#0056b3"      # Hauptfarbe (Buttons, Header-Linie)
-  text_dark: "#32373c"    # Dunkler Text (Überschriften)
-  text_light: "#6d6d6d"   # Heller Text (Tabellen-Header)
-  bg_light: "#fdfdfd"     # Sehr heller Hintergrund
-  bg_gray: "#f8f8f8"      # Grauer Hintergrund
+```ini
+# Firma
+APP_COMPANY__NAME="Musterfirma GmbH"
+APP_COMPANY__ADDRESS="Musterstraße 123 &bull; 12345 Musterstadt"
+APP_COMPANY__LOGO_FILENAME="logo.png"   # Muss im Ordner static/ liegen
+
+# Farben
+APP_COLORS__PRIMARY="#0056b3"      # Hauptfarbe (Buttons, Header-Linie)
+APP_COLORS__TEXT_DARK="#32373c"     # Dunkler Text (Überschriften)
+APP_COLORS__TEXT_LIGHT="#6d6d6d"    # Heller Text (Tabellen-Header)
+APP_COLORS__BG_LIGHT="#fdfdfd"     # Sehr heller Hintergrund
+APP_COLORS__BG_GRAY="#f8f8f8"      # Grauer Hintergrund
 ```
+
+> **Hinweis:** Sensible Werte wie SMB-Zugangsdaten sollten ausschließlich über die `.env`-Datei
+> oder echte Umgebungsvariablen gesetzt werden:
+> ```ini
+> APP_SMB__ENABLED=true
+> APP_SMB__SERVER=fileserver.domain.local
+> APP_SMB__SHARE=Freigabe
+> APP_SMB__FOLDER=PDFs
+> APP_SMB__USERNAME=meinnutzer
+> APP_SMB__PASSWORD=meinpasswort
+> ```
 
 ---
 
 ## Formulare definieren (`forms/*.yaml`)
-> **Hinweis:** Sensible Werte wie SMB-Zugangsdaten sollten nicht in der Compose- oder
-> Konfigurationsdatei stehen. Lege im einfachsten Fall stattdessen eine `.env`-Datei im Projektverzeichnis an
-> (wird von `docker-compose` automatisch geladen) und definiere dort z. B.:
-> ```ini
-> SMB_ENABLED=true
-> SMB_SERVER=fileserver.domain.local
-> SMB_SHARE=Freigabe
-> SMB_FOLDER=PDFs
-> SMB_USERNAME=meinnutzer
-> SMB_PASSWORD=meinpasswort
-> ```
-> Die Anwendung liest diese Umgebungsvariablen beim Start und übergibt sie an den
-> SMB-Upload.
 
-### Formulare definieren (`forms/*.yaml`)
 Neue Formulare werden einfach als `.yaml`-Datei im Ordner `forms/` abgelegt. Die Anwendung erkennt sie automatisch.
 
 > **Hinweis:** Die Dateien in `forms/` (direkt, nicht in Unterverzeichnissen) werden **nicht** im Repository versioniert, damit in der Produktion individuelle Anpassungen möglich sind, ohne bei `git pull` Konflikte zu erzeugen.
