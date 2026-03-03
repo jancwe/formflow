@@ -1,5 +1,7 @@
 # formflow: Dynamischer Formular- & PDF-Generator
 
+**Version: 0.1.0**
+
 formflow ist eine leichtgewichtige, dockerisierte Webanwendung zur digitalen Erfassung von Formulardaten (z.B. Hardware-Übergabeprotokolle) inklusive digitaler Unterschrift. 
 
 Die Anwendung generiert aus den eingegebenen Daten automatisch ein professionelles, an die Corporate Identity angepasstes PDF-Dokument und speichert dieses auf dem Server.
