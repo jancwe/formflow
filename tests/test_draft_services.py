@@ -1,8 +1,9 @@
 import json
 import os
 import pytest
+from werkzeug.datastructures import MultiDict
 
-from services import save_draft, load_draft, list_drafts, delete_draft
+from services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
 
 
 @pytest.fixture
@@ -229,3 +230,69 @@ def test_delete_draft_removes_file(drafts_dir):
 def test_delete_draft_is_idempotent(drafts_dir):
     """delete_draft does not raise when called for a non-existent draft."""
     delete_draft(drafts_dir, "does_not_exist")  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# collect_form_data
+# ---------------------------------------------------------------------------
+
+def test_collect_form_data_multiselect_stored_as_list():
+    """collect_form_data stores multi-select values as a list, not a joined string."""
+    form_def = {
+        "fields": [
+            {"type": "select", "name": "accessories", "multiple": True},
+        ]
+    }
+    request_form = MultiDict([("accessories", "Netzteil"), ("accessories", "Maus")])
+
+    result = collect_form_data(form_def, request_form)
+
+    assert result["accessories"] == ["Netzteil", "Maus"]
+    assert isinstance(result["accessories"], list)
+
+
+def test_collect_form_data_multiselect_empty_list():
+    """collect_form_data stores an empty list when no options are selected."""
+    form_def = {
+        "fields": [
+            {"type": "select", "name": "accessories", "multiple": True},
+        ]
+    }
+    request_form = MultiDict()
+
+    result = collect_form_data(form_def, request_form)
+
+    assert result["accessories"] == []
+
+
+def test_collect_form_data_single_select_stored_as_string():
+    """collect_form_data stores single-select values as a string (unchanged)."""
+    form_def = {
+        "fields": [
+            {"type": "select", "name": "location", "multiple": False},
+        ]
+    }
+    request_form = MultiDict([("location", "Berlin")])
+
+    result = collect_form_data(form_def, request_form)
+
+    assert result["location"] == "Berlin"
+    assert isinstance(result["location"], str)
+
+
+def test_list_drafts_draft_subtitle_with_list_value(drafts_dir):
+    """list_drafts builds draft_subtitle correctly when in_draft_title field is a list."""
+    forms = {
+        "equipment": {
+            "title": "Geräteübergabe",
+            "fields": [
+                {"name": "user", "in_draft_title": True},
+                {"name": "accessories", "type": "select", "multiple": True, "in_draft_title": True},
+            ],
+        }
+    }
+    save_draft(drafts_dir, "equipment", {"user": "Max", "accessories": ["Netzteil", "Maus"]})
+
+    drafts = list_drafts(drafts_dir, forms)
+
+    assert drafts[0]["draft_subtitle"] == "Max, Netzteil, Maus"

@@ -59,7 +59,7 @@
                                        name="{{ field.name }}" 
                                        value="{{ option }}" 
                                        id="{{ field.name }}_{{ loop.index }}"
-                                       {% if data and data.getlist and option in data.getlist(field.name) %}checked{% endif %}>
+                                       {% if option in (data.getlist(field.name) if data.getlist else (data.get(field.name) or [])) %}checked{% endif %}>
                                 <label class="form-check-label" for="{{ field.name }}_{{ loop.index }}">
                                     {{ option }}
                                 </label>

@@ -30,6 +30,23 @@ SIMPLE_FORM = {
     ],
 }
 
+FORM_WITH_MULTISELECT = {
+    "form_id": "multi_form",
+    "title": "Formular mit Mehrfachauswahl",
+    "submit_button": "Vorschau anzeigen",
+    "fields": [
+        {"type": "text", "name": "name", "label": "Name", "required": False, "placeholder": ""},
+        {
+            "type": "select",
+            "name": "accessories",
+            "label": "Zubehör",
+            "required": False,
+            "multiple": True,
+            "options": ["Netzteil", "Maus", "Tasche"],
+        },
+    ],
+}
+
 
 @pytest.fixture
 def app_with_drafts(tmp_path, monkeypatch):
@@ -47,7 +64,7 @@ def app_with_drafts(tmp_path, monkeypatch):
     flask_app.config["formflow"] = config
 
     engine = FormEngine(forms_dir="forms", config=config)
-    engine.forms = {"test_form": SIMPLE_FORM}
+    engine.forms = {"test_form": SIMPLE_FORM, "multi_form": FORM_WITH_MULTISELECT}
     engine.init_app(flask_app)
 
     return flask_app
@@ -158,6 +175,21 @@ class TestLoadDraftRoute:
         response = client.get(f"/draft/no_such_form/{draft_id}/load")
         assert response.status_code == 404
 
+    def test_load_draft_restores_multiselect_checkboxes(self, client, tmp_path):
+        """Loading a draft should restore multi-select checkboxes that were saved."""
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "multi_form", {"name": "Test", "accessories": ["Netzteil", "Maus"]})
+
+        response = client.get(f"/draft/multi_form/{draft_id}/load")
+        assert response.status_code == 200
+
+        html = response.get_data(as_text=True)
+        # Both selected options should be checked (checked> marks the end of checkbox input)
+        assert html.count("checked>") == 2
+        # Verify the values appear in the form
+        assert 'value="Netzteil"' in html
+        assert 'value="Maus"' in html
+        assert 'value="Tasche"' in html
 
 # ---------------------------------------------------------------------------
 # POST /draft/<draft_id>/delete  – delete draft
