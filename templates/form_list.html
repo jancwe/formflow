@@ -6,7 +6,30 @@
 <div class="card">
     <div class="card-body">
         <h3 class="card-title mb-4">Verfügbare Formulare</h3>
-        
+
+        {% if drafts %}
+        <h5 class="mb-3">Offene Entwürfe</h5>
+        <div class="list-group mb-4">
+            {% for draft in drafts %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1" style="color: var(--text-dark);">{{ draft.form_title }}</h6>
+                        {% if draft.draft_subtitle %}<small class="text-dark fw-semibold">{{ draft.draft_subtitle }}</small><br>{% endif %}
+                        <small class="text-muted">Gespeichert: {{ draft.saved_at | replace('T', ' ') | truncate(19, True, '') }} UTC</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/draft/{{ draft.form_id }}/{{ draft.draft_id }}/load" class="btn btn-sm btn-outline-primary">Weiterbearbeiten</a>
+                        <form action="/draft/{{ draft.draft_id }}/delete" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% if forms %}
         <div class="list-group">
             {% for form_id, form in forms.items() %}

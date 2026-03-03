@@ -8,3 +8,4 @@ Dockerfile.bak
 frontend-backup.tar.gz
 forms/*.yaml
 !forms/examples/*.yaml
+drafts/

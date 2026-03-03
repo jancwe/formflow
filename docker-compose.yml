@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   formflow-app:
     build: .
@@ -11,4 +10,16 @@ services:
       - ./forms:/app/forms:Z
       - ./pdf_templates:/app/pdf_templates:Z
       - ./static:/app/static:Z
+      - ./drafts:/app/drafts:Z
+    # Resource limits prevent a runaway process (e.g. concurrent WeasyPrint
+    # PDF renderings) from consuming all available host resources.
+    # Tune these values to match your hardware and expected workload.
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     restart: unless-stopped
