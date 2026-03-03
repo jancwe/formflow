@@ -8,20 +8,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const hiddenInput = document.getElementById(`signature64_${fieldName}`);
         const clearButton = document.getElementById(`clear_${fieldName}`);
 
+        // SignaturePad initialisieren
+        const pad = new SignaturePad(canvas);
+        signaturePads[fieldName] = pad;
+
         // Canvas an die tatsächliche Größe anpassen für scharfe Linien
         function resizeCanvas() {
+            const dataFromPad = !pad.isEmpty();
+            const existingData = dataFromPad ? pad.toDataURL() : (hiddenInput ? hiddenInput.value : null);
+
             const ratio = Math.max(window.devicePixelRatio || 1, 1);
             canvas.width = canvas.offsetWidth * ratio;
             canvas.height = canvas.offsetHeight * ratio;
             canvas.getContext("2d").scale(ratio, ratio);
+
+            if (existingData) {
+                pad.fromDataURL(existingData);
+                if (dataFromPad && hiddenInput) {
+                    hiddenInput.value = existingData;
+                }
+            }
         }
-        
+
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
-
-        // SignaturePad initialisieren
-        const pad = new SignaturePad(canvas);
-        signaturePads[fieldName] = pad;
 
         // Wenn wir vom "Bearbeiten" zurückkommen, Unterschrift wiederherstellen
         if (hiddenInput && hiddenInput.value) {
@@ -50,15 +60,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hiddenInput = document.getElementById(`signature64_${fieldName}`);
                 const isRequired = hiddenInput && hiddenInput.hasAttribute('required');
 
-                if (isRequired && pad.isEmpty() && !hiddenInput.value) {
+                // Unterschrift ins hidden input schreiben, falls neu gezeichnet
+                if (!pad.isEmpty()) {
+                    if (hiddenInput) hiddenInput.value = pad.toDataURL();
+                }
+
+                if (isRequired && !hiddenInput.value) {
                     isValid = false;
                     alert(`Bitte das Unterschriftsfeld "${fieldName}" ausfüllen!`);
                     break; // Schleife abbrechen beim ersten Fehler
-                } else {
-                    // Nur aktualisieren, wenn neu unterschrieben wurde
-                    if (!pad.isEmpty() && hiddenInput) {
-                        hiddenInput.value = pad.toDataURL();
-                    }
                 }
             }
 
