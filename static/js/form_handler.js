@@ -15,18 +15,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Canvas an die tatsächliche Größe anpassen für scharfe Linien
         function resizeCanvas() {
             const dataFromPad = !pad.isEmpty();
-            const existingData = dataFromPad ? pad.toDataURL() : (hiddenInput ? hiddenInput.value : null);
+            const vectorData = dataFromPad ? pad.toData() : null;
 
             const ratio = Math.max(window.devicePixelRatio || 1, 1);
             canvas.width = canvas.offsetWidth * ratio;
             canvas.height = canvas.offsetHeight * ratio;
             canvas.getContext("2d").scale(ratio, ratio);
 
-            if (existingData) {
-                pad.fromDataURL(existingData);
-                if (dataFromPad && hiddenInput) {
-                    hiddenInput.value = existingData;
+            if (vectorData) {
+                pad.fromData(vectorData);
+                if (hiddenInput) {
+                    hiddenInput.value = pad.toDataURL();
                 }
+            } else if (hiddenInput && hiddenInput.value) {
+                pad.fromDataURL(hiddenInput.value);
             }
         }
 
