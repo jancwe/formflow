@@ -46,17 +46,27 @@
 
     <script>
         const canvas = document.getElementById('signature-pad');
+        const signaturePad = new SignaturePad(canvas);
+
         function resizeCanvas() {
-            const ratio =  Math.max(window.devicePixelRatio || 1, 1);
+            const dataFromPad = !signaturePad.isEmpty();
+            const existingData = dataFromPad ? signaturePad.toDataURL() : document.getElementById('signature64').value;
+
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
             canvas.width = canvas.offsetWidth * ratio;
             canvas.height = canvas.offsetHeight * ratio;
             canvas.getContext("2d").scale(ratio, ratio);
+
+            if (existingData) {
+                signaturePad.fromDataURL(existingData);
+                if (dataFromPad) {
+                    document.getElementById('signature64').value = existingData;
+                }
+            }
         }
         window.onresize = resizeCanvas;
         resizeCanvas();
 
-        const signaturePad = new SignaturePad(canvas);
-        
         // Wenn wir vom "Bearbeiten" zurückkommen, Unterschrift wiederherstellen
         const existingSignature = document.getElementById('signature64').value;
         if (existingSignature) {
@@ -69,14 +79,14 @@
         });
 
         document.getElementById('handoverForm').addEventListener('submit', (e) => {
-            if (signaturePad.isEmpty() && !document.getElementById('signature64').value) {
+            // Unterschrift ins hidden input schreiben, falls neu gezeichnet
+            if (!signaturePad.isEmpty()) {
+                document.getElementById('signature64').value = signaturePad.toDataURL();
+            }
+
+            if (!document.getElementById('signature64').value) {
                 e.preventDefault();
                 alert("Bitte unterschreiben!");
-            } else {
-                // Nur aktualisieren, wenn neu unterschrieben wurde
-                if (!signaturePad.isEmpty()) {
-                    document.getElementById('signature64').value = signaturePad.toDataURL();
-                }
             }
         });
     </script>
