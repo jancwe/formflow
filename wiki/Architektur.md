@@ -25,7 +25,7 @@ formflow folgt einem klassischen **dreischichtigen Architekturmuster** (3-Tier A
 |---|---|
 | **Präsentationsschicht** | HTML-Templates (Jinja2), Bootstrap-Frontend, Signatur-Canvas |
 | **Anwendungsschicht** | Flask-Routing, Formular-Engine, Formularverarbeitung, PDF-Workflow |
-| **Datenschicht** | YAML-Formulardefinitionen, generierte PDF-Dateien, SMB-Netzlaufwerk |
+| **Datenschicht** | YAML-Formulardefinitionen, generierte PDF-Dateien, Entwürfe (JSON), SMB-Netzlaufwerk |
 
 Die Anwendung wird als **Docker-Container** betrieben und über **Gunicorn** als WSGI-Server ausgeliefert.
 
@@ -42,7 +42,7 @@ Die Anwendung wird als **Docker-Container** betrieben und über **Gunicorn** als
 │   Flask (WSGI) · FormEngine · PdfGenerator · Services      │
 ├────────────────────────────────────────────────────────────┤
 │                    Datenschicht                             │
-│   YAML-Formulare · PDF-Dateien (lokal) · SMB-Netzlaufwerk  │
+│   YAML-Formulare · PDF-Dateien (lokal) · Entwürfe (JSON) · SMB-Netzlaufwerk  │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,6 +71,7 @@ graph TD
             Forms["forms/\nYAML-Definitionen"]
             PdfTemplates["pdf_templates/\nHTML-Templates"]
             PdfsDir["pdfs/\ngenerierte PDFs"]
+            DraftsDir["drafts/\nEntwürfe (JSON)"]
             Static["static/\nCSS · JS · Bilder"]
             Templates["templates/\nWeb-Templates"]
         end
@@ -88,6 +89,7 @@ graph TD
     FormEngine -- "rendert" --> Templates
     PdfGenerator -- "liest" --> PdfTemplates
     PdfGenerator -- "schreibt" --> PdfsDir
+    Services -- "liest/schreibt" --> DraftsDir
     FormEngine -- "speichert PDF via SMB" --> SMB
     Browser -- "lädt" --> Static
 ```
@@ -117,6 +119,7 @@ classDiagram
         +str text_dark
         +str text_light
         +str bg_light
+        +str bg_gray
     }
 
     class SmbConfig {
@@ -147,6 +150,10 @@ classDiagram
 
     class Services {
         +collect_form_data(form_def, request_form) Dict
+        +save_draft(drafts_dir, form_id, form_data) str
+        +load_draft(drafts_dir, draft_id) dict
+        +list_drafts(drafts_dir, forms) list
+        +delete_draft(drafts_dir, draft_id) None
     }
 
     AppSettings "1" *-- "1" CompanyConfig
@@ -228,6 +235,7 @@ graph TD
             V2["./forms → /app/forms"]
             V3["./pdf_templates → /app/pdf_templates"]
             V4["./static → /app/static"]
+            V5["./drafts → /app/drafts"]
         end
     end
 
@@ -239,6 +247,7 @@ graph TD
     AppProd --> V2
     AppProd --> V3
     AppProd --> V4
+    AppProd --> V5
     AppProd -- "SMB (optional)" --> NetSMB
 ```
 
@@ -249,7 +258,7 @@ graph TD
 | **Produktion** | `docker-compose.yml` | Nur `formflow-app`-Container; SMB über externe Netzwerkfreigabe |
 | **Entwicklung** | `docker-compose.dev.yml` | Zusätzlicher `smb-server`-Container zum Testen des SMB-Uploads |
 
-Der Anwendungsserver **Gunicorn** wird mit 4 Worker-Prozessen gestartet (`-w 4`), um parallele Anfragen zu bedienen.
+Der Anwendungsserver **Gunicorn** wird mit 2 Worker-Prozessen gestartet (`-w 2`), um parallele Anfragen zu bedienen.
 
 ---
 
