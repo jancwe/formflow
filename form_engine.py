@@ -130,7 +130,7 @@ class FormEngine:
                 # Bei 'select' mit 'multiple: true' müssen wir getlist() verwenden
                 if field.get('type') == 'select' and field.get('multiple'):
                     selected_options = request.form.getlist(field_name)
-                    form_data[field_name] = ", ".join(selected_options)
+                    form_data[field_name] = selected_options
                 else:
                     form_data[field_name] = request.form.get(field_name, '')
             
@@ -173,7 +173,7 @@ class FormEngine:
         
         @self.app.route('/edit/<form_id>/<file_id>', methods=['POST'])
         def edit_form(form_id: str, file_id: str):
-            """Zurück zum Bearbeiten des Formulars"""
+            """Zurück zum Bearbeiten des Formulars mit vorausgefüllten Daten"""
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
 
@@ -181,7 +181,18 @@ class FormEngine:
             if os.path.exists(temp_filename):
                 os.remove(temp_filename)
 
-            return redirect(url_for('show_form', form_id=form_id))
+            form_def = self.forms[form_id]
+
+            # Standardwerte setzen (wie in show_form)
+            for field in form_def.get('fields', []):
+                if field.get('type') == 'date' and field.get('default') == 'today':
+                    field['default_value'] = date.today().isoformat()
+
+            return render_template('dynamic_form.html',
+                                   form=form_def,
+                                   data=request.form,
+                                   date_today=date.today().isoformat(),
+                                   app_config=self.config)
 
         @self.app.route('/draft/<form_id>', methods=['POST'])
         def save_draft_route(form_id: str):

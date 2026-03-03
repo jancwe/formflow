@@ -25,14 +25,26 @@
         <div class="d-flex justify-content-between">
             <form action="/edit/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 pe-2">
                 {% for key, value in form_data.items() %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% if value is iterable and value is not string %}
+                        {% for v in value %}
+                        <input type="hidden" name="{{ key }}" value="{{ v }}">
+                        {% endfor %}
+                    {% else %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
                 {% endfor %}
                 <button type="submit" class="btn btn-outline-secondary w-100">Zurück zum Bearbeiten</button>
             </form>
             
             <form action="/confirm/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 ps-2">
                 {% for key, value in form_data.items() %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% if value is iterable and value is not string %}
+                        {% for v in value %}
+                        <input type="hidden" name="{{ key }}" value="{{ v }}">
+                        {% endfor %}
+                    {% else %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
                 {% endfor %}
                 <button type="submit" class="btn btn-success w-100">Bestätigen & Speichern</button>
             </form>
