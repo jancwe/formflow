@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 import re
@@ -10,6 +11,7 @@ import yaml
 import smbclient
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
 from pdf_generator import PdfGenerator
+from services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
@@ -38,6 +40,8 @@ class FormEngine:
         self.app = app
         # Make sure the pdfs directory exists
         os.makedirs('pdfs', exist_ok=True)
+        # Make sure the drafts directory exists
+        os.makedirs('drafts', exist_ok=True)
         self._register_routes()
         self._start_reload_watcher()
 
@@ -111,7 +115,8 @@ class FormEngine:
         @self.app.route('/forms')
         def list_forms():
             """Zeigt eine Liste aller verfügbaren Formulare an"""
-            return render_template('form_list.html', forms=self.forms, app_config=self.config)
+            drafts = list_drafts('drafts', self.forms)
+            return render_template('form_list.html', forms=self.forms, drafts=drafts, app_config=self.config)
         
         @self.app.route('/form/<form_id>', methods=['GET', 'POST'])
         def show_form(form_id: str):
@@ -204,6 +209,50 @@ class FormEngine:
                 os.remove(temp_filename)
 
             return redirect(url_for('show_form', form_id=form_id))
+
+        @self.app.route('/draft/<form_id>', methods=['POST'])
+        def save_draft_route(form_id: str):
+            """Speichert Formulardaten als Entwurf"""
+            if form_id not in self.forms:
+                return "Formular nicht gefunden", 404
+
+            form_def = self.forms[form_id]
+            form_data = collect_form_data(form_def, request.form)
+            save_draft('drafts', form_id, form_data)
+            return redirect(url_for('list_forms'))
+
+        @self.app.route('/draft/<form_id>/<draft_id>/load', methods=['GET'])
+        def load_draft_route(form_id: str, draft_id: str):
+            """Lädt einen Entwurf und öffnet das Formular vorausgefüllt"""
+            try:
+                draft = load_draft('drafts', draft_id)
+            except (FileNotFoundError, json.JSONDecodeError):
+                logger.warning(f"Entwurf {draft_id} konnte nicht geladen werden.")
+                return redirect(url_for('list_forms'))
+
+            delete_draft('drafts', draft_id)
+
+            if form_id not in self.forms:
+                return "Formular nicht gefunden", 404
+
+            form_def = self.forms[form_id]
+            data = draft.get('form_data', {})
+
+            for field in form_def.get('fields', []):
+                if field.get('type') == 'date' and field.get('default') == 'today':
+                    field['default_value'] = date.today().isoformat()
+
+            return render_template('dynamic_form.html',
+                                   form=form_def,
+                                   data=data,
+                                   date_today=date.today().isoformat(),
+                                   app_config=self.config)
+
+        @self.app.route('/draft/<draft_id>/delete', methods=['POST'])
+        def delete_draft_route(draft_id: str):
+            """Löscht einen Entwurf"""
+            delete_draft('drafts', draft_id)
+            return redirect(url_for('list_forms'))
 
     # --- Hilfsfunktionen --------------------------------------------------
     def _sanitize_for_filename(self, value: str) -> str:
