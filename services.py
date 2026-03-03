@@ -16,10 +16,9 @@ def collect_form_data(form_def: Dict[str, Any], request_form: MultiDict) -> Dict
         if not field_name:
             continue
 
-        # Bei 'select' mit 'multiple: true' muss getlist() verwendet werden
+        # Bei 'select' mit 'multiple: true' getlist() verwenden und als Liste speichern
         if field.get('type') == 'select' and field.get('multiple'):
-            selected_options = request_form.getlist(field_name)
-            form_data[field_name] = ", ".join(selected_options)
+            form_data[field_name] = request_form.getlist(field_name)
         else:
             form_data[field_name] = request_form.get(field_name, '')
     return form_data
@@ -61,11 +60,17 @@ def list_drafts(drafts_dir: str, forms: dict) -> list:
                 draft = json.load(f)
             form_def = forms.get(draft.get('form_id'), {})
             form_data = draft.get('form_data', {})
-            subtitle_parts = [
-                form_data[field['name']]
-                for field in form_def.get('fields', [])
-                if field.get('in_draft_title') and form_data.get(field['name'])
-            ]
+            subtitle_parts = []
+            for field in form_def.get('fields', []):
+                if not field.get('in_draft_title'):
+                    continue
+                value = form_data.get(field['name'])
+                if not value:
+                    continue
+                if isinstance(value, list):
+                    subtitle_parts.append(", ".join(value))
+                else:
+                    subtitle_parts.append(value)
             drafts.append({
                 "draft_id": draft.get('draft_id'),
                 "form_id": draft.get('form_id'),
