@@ -3,6 +3,7 @@ import json
 import os
 import logging
 import re
+import shutil
 import time
 import uuid
 from datetime import date
@@ -317,7 +318,7 @@ class FormEngine:
             try:
                 with open(temp_path, 'rb') as local_file:
                     with smbclient.open_file(remote_path, mode='wb') as remote_file:
-                        remote_file.write(local_file.read())
+                        shutil.copyfileobj(local_file, remote_file, length=65536)
             except Exception:
                 # Session may have expired or been disconnected; attempt to re-register once.
                 logger.info("SMB-Verbindung unterbrochen oder Session abgelaufen. Versuche erneute Session-Registrierung.")
@@ -326,7 +327,7 @@ class FormEngine:
                 self._smb_session_registered = True
                 with open(temp_path, 'rb') as local_file:
                     with smbclient.open_file(remote_path, mode='wb') as remote_file:
-                        remote_file.write(local_file.read())
+                        shutil.copyfileobj(local_file, remote_file, length=65536)
 
             logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
             os.remove(temp_path)
