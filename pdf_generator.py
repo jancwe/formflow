@@ -3,7 +3,9 @@ import logging
 from datetime import date
 from typing import Dict, Any, Optional
 from weasyprint import HTML
-from jinja2 import Template
+# Environment + FileSystemLoader is used instead of Template() directly so that
+# compiled templates are cached in memory and not re-parsed on every request.
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +14,10 @@ class PdfGenerator:
     
     def __init__(self, templates_dir: str = 'pdf_templates'):
         self.templates_dir = templates_dir
+        self._env = Environment(
+            loader=FileSystemLoader(templates_dir),
+            auto_reload=False,
+        )
 
     def generate(self, form_def: Dict[str, Any], form_data: Dict[str, Any], output_filename: str, config: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -28,18 +34,13 @@ class PdfGenerator:
             
         # Template-Name aus YAML lesen oder Standard verwenden
         template_name = form_def.get('pdf_template', 'default_pdf.html')
-        template_path = os.path.join(self.templates_dir, template_name)
-        
+
         # Fallback, falls das Template nicht existiert
-        if not os.path.exists(template_path):
+        try:
+            template = self._env.get_template(template_name)
+        except TemplateNotFound:
             logger.warning(f"PDF-Template {template_name} nicht gefunden. Verwende default_pdf.html")
-            template_path = os.path.join(self.templates_dir, 'default_pdf.html')
-            
-        # HTML mit Jinja2 rendern
-        # Da wir nicht im app-Kontext sind, wenn wir render_template mit einem absoluten Pfad aufrufen,
-        # lesen wir die Datei manuell und nutzen Jinja2 direkt
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template = Template(f.read())
+            template = self._env.get_template('default_pdf.html')
             
         html_content = template.render(
             form_title=form_def.get('title', 'Formular'),
