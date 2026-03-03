@@ -1,6 +1,7 @@
 import os
 import logging
 import re
+import threading
 import time
 import uuid
 from datetime import date
@@ -36,8 +37,37 @@ class FormEngine:
         # Make sure the pdfs directory exists
         os.makedirs('pdfs', exist_ok=True)
         self._register_routes()
+        self._start_reload_watcher()
 
-        
+    def _get_forms_snapshot(self) -> dict:
+        """Gibt ein Dict {Dateipfad: mtime} aller YAML-Dateien zurück."""
+        snapshot = {}
+        if not os.path.exists(self.forms_dir):
+            return snapshot
+        for filename in os.listdir(self.forms_dir):
+            if filename.endswith(('.yaml', '.yml')):
+                path = os.path.join(self.forms_dir, filename)
+                snapshot[path] = os.stat(path).st_mtime
+        return snapshot
+
+    def _start_reload_watcher(self, interval: int = 5):
+        """Startet einen Daemon-Thread, der alle `interval` Sekunden auf YAML-Änderungen prüft."""
+        self._forms_snapshot = self._get_forms_snapshot()
+
+        def watch():
+            while True:
+                time.sleep(interval)
+                current = self._get_forms_snapshot()
+                if current != self._forms_snapshot:
+                    logger.info("YAML-Änderung erkannt – lade Formulare neu...")
+                    self._load_forms()
+                    self._forms_snapshot = current
+
+        t = threading.Thread(target=watch, daemon=True)
+        t.start()
+        logger.info(f"YAML-Watcher gestartet (Intervall: {interval}s)")
+
+
     
     def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""

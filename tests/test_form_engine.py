@@ -1,4 +1,6 @@
 import pytest
+import shutil
+import threading
 import time
 from form_engine import FormEngine
 
@@ -141,3 +143,67 @@ def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_pat
     assert "warning" in result
     assert "SMB-Server" in result["warning"]
     assert "fallback.pdf" in result["warning"]
+
+
+def test_get_forms_snapshot_empty_dir(tmp_path):
+    """Tests that _get_forms_snapshot returns empty dict for empty directory."""
+    engine = FormEngine(forms_dir=str(tmp_path), config=AppSettings().model_dump())
+    snapshot = engine._get_forms_snapshot()
+    assert snapshot == {}
+
+
+def test_get_forms_snapshot_with_yaml_files(tmp_path):
+    """Tests that _get_forms_snapshot returns mtimes for YAML files."""
+    (tmp_path / "form1.yaml").write_text("form_id: form1")
+    (tmp_path / "form2.yml").write_text("form_id: form2")
+    (tmp_path / "readme.txt").write_text("ignore me")
+
+    engine = FormEngine(forms_dir=str(tmp_path), config=AppSettings().model_dump())
+    snapshot = engine._get_forms_snapshot()
+
+    assert len(snapshot) == 2
+    assert any(k.endswith("form1.yaml") for k in snapshot)
+    assert any(k.endswith("form2.yml") for k in snapshot)
+    assert not any(k.endswith("readme.txt") for k in snapshot)
+
+
+def test_get_forms_snapshot_nonexistent_dir(tmp_path):
+    """Tests that _get_forms_snapshot returns empty dict if forms_dir doesn't exist."""
+    nonexistent = str(tmp_path / "nonexistent_subdir")
+    engine = FormEngine(forms_dir=nonexistent, config=AppSettings().model_dump())
+    # Remove the directory that _load_forms() created, to test the nonexistent case
+    shutil.rmtree(nonexistent)
+    snapshot = engine._get_forms_snapshot()
+    assert snapshot == {}
+
+
+def test_start_reload_watcher_starts_daemon_thread(tmp_path, mocker):
+    """Tests that _start_reload_watcher starts a daemon thread."""
+    engine = FormEngine(forms_dir=str(tmp_path), config=AppSettings().model_dump())
+
+    threads_before = set(t.ident for t in threading.enumerate())
+    engine._start_reload_watcher(interval=60)
+    threads_after = threading.enumerate()
+
+    new_daemon_threads = [t for t in threads_after if t.ident not in threads_before and t.daemon]
+    assert len(new_daemon_threads) >= 1
+
+
+def test_start_reload_watcher_detects_new_file(tmp_path):
+    """Tests that the watcher reloads forms when a new YAML file is added."""
+    engine = FormEngine(forms_dir=str(tmp_path), config=AppSettings().model_dump())
+    engine._start_reload_watcher(interval=0.1)
+
+    assert len(engine.forms) == 0
+
+    (tmp_path / "new_form.yaml").write_text("form_id: new_form\nfields: []")
+
+    # Wait for the watcher to detect the change
+    deadline = time.time() + 3
+    while time.time() < deadline:
+        if "new_form" in engine.forms:
+            break
+        time.sleep(0.05)
+
+    assert "new_form" in engine.forms
+
