@@ -169,7 +169,11 @@
                 <th>{{ field.label }}</th>
                 <td>
                     {% if form_data.get(field.name) %}
-                        {{ form_data.get(field.name) }}
+                        {% if form_data.get(field.name) is iterable and form_data.get(field.name) is not string %}
+                            {{ form_data.get(field.name) | join(', ') }}
+                        {% else %}
+                            {{ form_data.get(field.name) }}
+                        {% endif %}
                     {% else %}
                         <span style="color: #ccc; font-style: italic;">Nicht angegeben</span>
                     {% endif %}
