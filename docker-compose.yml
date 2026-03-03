@@ -11,4 +11,5 @@ services:
       - ./forms:/app/forms:Z
       - ./pdf_templates:/app/pdf_templates:Z
       - ./static:/app/static:Z
+      - ./drafts:/app/drafts:Z
     restart: unless-stopped
