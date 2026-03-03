@@ -93,10 +93,47 @@
             
             <button type="submit" class="btn btn-primary w-100">{{ form.submit_button }}</button>
         </form>
+
+        <form id="draftForm" action="/draft/{{ form.form_id }}" method="POST" class="mt-2">
+            <button type="submit" class="btn btn-outline-secondary w-100">Als Entwurf speichern</button>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/form_handler.js') }}"></script>
+<script>
+document.getElementById('draftForm').addEventListener('submit', function() {
+    var mainForm = document.getElementById('dynamicForm');
+    var draftForm = this;
+    var fields = mainForm.querySelectorAll('input, select, textarea');
+    fields.forEach(function(field) {
+        if (!field.name) return;
+        if (field.type === 'checkbox') {
+            if (field.checked) {
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = field.name;
+                hidden.value = field.value;
+                draftForm.appendChild(hidden);
+            }
+        } else if (field.type === 'radio') {
+            if (field.checked) {
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = field.name;
+                hidden.value = field.value;
+                draftForm.appendChild(hidden);
+            }
+        } else {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = field.name;
+            hidden.value = field.value;
+            draftForm.appendChild(hidden);
+        }
+    });
+});
+</script>
 {% endblock %}

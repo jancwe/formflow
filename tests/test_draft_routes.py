@@ -1,0 +1,270 @@
+"""Integration tests for the draft routes in FormEngine."""
+import json
+import os
+import pytest
+
+from flask import Flask
+from config import AppSettings
+from form_engine import FormEngine
+from services import save_draft
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+SIMPLE_FORM = {
+    "form_id": "test_form",
+    "title": "Testformular",
+    "submit_button": "Vorschau anzeigen",
+    "fields": [
+        {"type": "text", "name": "name", "label": "Name", "required": False, "placeholder": "", "in_draft_title": True},
+        {"type": "date", "name": "date", "label": "Datum", "required": False},
+        {
+            "type": "signature",
+            "name": "signature",
+            "label": "Unterschrift",
+            "required": True,
+            "height": "200px",
+        },
+    ],
+}
+
+
+@pytest.fixture
+def app_with_drafts(tmp_path, monkeypatch):
+    """
+    Creates a Flask test app with a FormEngine configured for a single test
+    form. Changes the working directory to tmp_path so that the hardcoded
+    'drafts/' and 'pdfs/' paths resolve inside the temporary directory.
+    """
+    monkeypatch.chdir(tmp_path)
+
+    flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"))
+    flask_app.config["TESTING"] = True
+
+    config = AppSettings().model_dump()
+    flask_app.config["formflow"] = config
+
+    engine = FormEngine(forms_dir="forms", config=config)
+    engine.forms = {"test_form": SIMPLE_FORM}
+    engine.init_app(flask_app)
+
+    return flask_app
+
+
+@pytest.fixture
+def client(app_with_drafts):
+    return app_with_drafts.test_client()
+
+
+@pytest.fixture
+def drafts_dir(tmp_path):
+    """Returns the path to the drafts directory used during tests."""
+    return str(tmp_path / "drafts")
+
+
+# ---------------------------------------------------------------------------
+# POST /draft/<form_id>  – save draft
+# ---------------------------------------------------------------------------
+
+class TestSaveDraftRoute:
+    def test_save_draft_redirects_to_forms(self, client):
+        """POST /draft/<form_id> should redirect to /forms on success."""
+        response = client.post(
+            "/draft/test_form",
+            data={"name": "Max", "date": "2026-01-01"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+        assert response.location.endswith("/forms")
+
+    def test_save_draft_creates_file(self, client, tmp_path):
+        """POST /draft/<form_id> should create a draft JSON file."""
+        client.post("/draft/test_form", data={"name": "Erika", "date": "2026-03-01"})
+
+        draft_files = list((tmp_path / "drafts").glob("draft_*.json"))
+        assert len(draft_files) == 1
+
+    def test_save_draft_persists_form_data(self, client, tmp_path):
+        """The saved draft file should contain the submitted field values."""
+        client.post(
+            "/draft/test_form",
+            data={"name": "Hans", "date": "2026-06-15"},
+        )
+
+        draft_files = list((tmp_path / "drafts").glob("draft_*.json"))
+        with open(draft_files[0], encoding="utf-8") as f:
+            draft = json.load(f)
+
+        assert draft["form_id"] == "test_form"
+        assert draft["form_data"]["name"] == "Hans"
+        assert draft["form_data"]["date"] == "2026-06-15"
+
+    def test_save_draft_unknown_form_returns_404(self, client):
+        """POST /draft/<form_id> for an unknown form should return 404."""
+        response = client.post("/draft/no_such_form", data={"x": "y"})
+        assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /draft/<form_id>/<draft_id>/load  – load draft
+# ---------------------------------------------------------------------------
+
+class TestLoadDraftRoute:
+    def _create_draft(self, tmp_path, form_data=None):
+        """Helper: writes a draft file directly and returns the draft_id."""
+        if form_data is None:
+            form_data = {"name": "TestUser", "date": "2026-01-15"}
+        drafts_dir = str(tmp_path / "drafts")
+        return save_draft(drafts_dir, "test_form", form_data)
+
+    def test_load_draft_returns_200(self, client, tmp_path):
+        """GET /draft/<form_id>/<draft_id>/load should return 200 with the form."""
+        draft_id = self._create_draft(tmp_path)
+        response = client.get(f"/draft/test_form/{draft_id}/load")
+        assert response.status_code == 200
+
+    def test_load_draft_prefills_field_values(self, client, tmp_path):
+        """The rendered form should contain the saved field values."""
+        draft_id = self._create_draft(tmp_path, {"name": "VorausgefülltUser", "date": "2026-02-20"})
+        response = client.get(f"/draft/test_form/{draft_id}/load")
+
+        html = response.get_data(as_text=True)
+        assert "VorausgefülltUser" in html
+
+    def test_load_draft_deletes_file_after_load(self, client, tmp_path):
+        """The draft file should be removed after it is loaded."""
+        draft_id = self._create_draft(tmp_path)
+        client.get(f"/draft/test_form/{draft_id}/load")
+
+        draft_path = tmp_path / "drafts" / f"draft_{draft_id}.json"
+        assert not draft_path.exists()
+
+    def test_load_draft_redirects_for_missing_draft(self, client):
+        """Loading a non-existent draft should redirect gracefully to /forms."""
+        response = client.get(
+            "/draft/test_form/nonexistent_draft_id/load",
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+        assert response.location.endswith("/forms")
+
+    def test_load_draft_returns_404_for_unknown_form(self, client, tmp_path):
+        """Loading a draft for an unknown form_id should return 404."""
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "no_such_form", {"k": "v"})
+
+        response = client.get(f"/draft/no_such_form/{draft_id}/load")
+        assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# POST /draft/<draft_id>/delete  – delete draft
+# ---------------------------------------------------------------------------
+
+class TestDeleteDraftRoute:
+    def test_delete_draft_redirects_to_forms(self, client, tmp_path):
+        """POST /draft/<draft_id>/delete should redirect to /forms."""
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "test_form", {"x": "y"})
+
+        response = client.post(f"/draft/{draft_id}/delete", follow_redirects=False)
+
+        assert response.status_code == 302
+        assert response.location.endswith("/forms")
+
+    def test_delete_draft_removes_file(self, client, tmp_path):
+        """POST /draft/<draft_id>/delete should remove the draft file."""
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "test_form", {"x": "y"})
+        draft_path = tmp_path / "drafts" / f"draft_{draft_id}.json"
+        assert draft_path.exists()
+
+        client.post(f"/draft/{draft_id}/delete")
+
+        assert not draft_path.exists()
+
+    def test_delete_nonexistent_draft_still_redirects(self, client):
+        """Deleting a non-existent draft should not crash; it should redirect to /forms."""
+        response = client.post("/draft/no_such_draft/delete", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.location.endswith("/forms")
+
+
+# ---------------------------------------------------------------------------
+# GET /forms  – list forms with drafts
+# ---------------------------------------------------------------------------
+
+class TestListFormsWithDrafts:
+    def test_list_forms_shows_draft_section(self, client, tmp_path):
+        """GET /forms shows the 'Offene Entwürfe' section when drafts exist."""
+        drafts_dir = str(tmp_path / "drafts")
+        save_draft(drafts_dir, "test_form", {"name": "DraftUser"})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert "Offene Entwürfe" in html
+
+    def test_list_forms_hides_draft_section_when_empty(self, client):
+        """GET /forms does not show 'Offene Entwürfe' when there are no drafts."""
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert response.status_code == 200
+        assert "Offene Entwürfe" not in html
+
+    def test_list_forms_shows_draft_form_title(self, client, tmp_path):
+        """GET /forms displays the form title for each draft."""
+        drafts_dir = str(tmp_path / "drafts")
+        save_draft(drafts_dir, "test_form", {})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert "Testformular" in html
+
+    def test_list_forms_shows_weiterbearbeiten_link(self, client, tmp_path):
+        """GET /forms includes a 'Weiterbearbeiten' link for each draft."""
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "test_form", {})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert "Weiterbearbeiten" in html
+        assert f"/draft/test_form/{draft_id}/load" in html
+
+    def test_list_forms_shows_delete_button(self, client, tmp_path):
+        """GET /forms includes a delete form/button for each draft."""
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "test_form", {})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert f"/draft/{draft_id}/delete" in html
+        assert "Löschen" in html
+
+    def test_list_forms_shows_draft_subtitle(self, client, tmp_path):
+        """GET /forms shows field values for in_draft_title fields as the subtitle."""
+        drafts_dir = str(tmp_path / "drafts")
+        save_draft(drafts_dir, "test_form", {"name": "Max Mustermann", "date": "2026-01-01"})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        assert "Max Mustermann" in html
+
+    def test_list_forms_no_subtitle_when_field_empty(self, client, tmp_path):
+        """GET /forms does not show a subtitle when in_draft_title field has no value."""
+        drafts_dir = str(tmp_path / "drafts")
+        save_draft(drafts_dir, "test_form", {"name": "", "date": "2026-01-01"})
+
+        response = client.get("/forms")
+        html = response.get_data(as_text=True)
+
+        # The subtitle span should not be rendered (empty string is falsy in Jinja2)
+        assert "fw-semibold" not in html
