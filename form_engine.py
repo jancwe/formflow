@@ -81,7 +81,10 @@ class FormEngine:
         @self.app.route('/pdf/<filename>')
         def serve_pdf(filename):
             """Stellt PDF-Dateien zur Verfügung"""
-            return send_from_directory('pdfs', filename)
+            response = send_from_directory('pdfs', filename)
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
         
         @self.app.route('/forms')
         def list_forms():
