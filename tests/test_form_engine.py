@@ -1,5 +1,7 @@
 import pytest
 import time
+from unittest.mock import patch
+from datetime import datetime
 from form_engine import FormEngine
 
 from config import AppSettings, ColorsConfig, SmbConfig
@@ -23,7 +25,7 @@ def test_sanitize_for_filename(form_engine):
     assert form_engine._sanitize_for_filename(" leading and trailing ") == "_leading_and_trailing_"
     assert form_engine._sanitize_for_filename("file_name-123_ok") == "file_name-123_ok"
 
-def test_generate_filename_parts(form_engine, monkeypatch):
+def test_generate_filename_parts(form_engine):
     """Tests the logic for generating filename parts from form data."""
     form_def = {
         "fields": [
@@ -40,13 +42,14 @@ def test_generate_filename_parts(form_engine, monkeypatch):
         "empty_field": ""
     }
 
-    # Mock time.time() to have a predictable timestamp
-    monkeypatch.setattr(time, "time", lambda: 1234567890)
+    # Mock datetime.now() to have a predictable timestamp
+    fixed_dt = datetime(2026, 1, 30, 8, 0)
+    with patch("form_engine.datetime") as mock_dt:
+        mock_dt.now.return_value = fixed_dt
+        parts = form_engine._generate_filename_parts("my-form", form_def, form_data)
 
-    parts = form_engine._generate_filename_parts("my-form", form_def, form_data)
-
-    # Expected: ['my-form', 'Max_Mustermann', 'ITSupport', '1234567890']
-    assert parts == ["my-form", "Max_Mustermann", "ITSupport", "1234567890"]
+    # Expected: timestamp first, then form_id and field values, no Unix timestamp at end
+    assert parts == ["2026-01-30_08-00", "my-form", "Max_Mustermann", "ITSupport"]
 
 def test_store_pdf_locally(form_engine, mocker, tmp_path):
     """Tests that the PDF is stored locally when SMB is disabled."""

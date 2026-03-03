@@ -6,7 +6,7 @@ import re
 import shutil
 import time
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, Any, Optional
 import yaml
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
@@ -265,7 +265,8 @@ class FormEngine:
         return re.sub(r'[^a-zA-Z0-9_-]', '', clean)
 
     def _generate_filename_parts(self, form_id: str, form_def: Dict[str, Any], form_data: Dict[str, Any]) -> list[str]:
-        parts = [form_id]
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        parts = [timestamp, form_id]
         for field in form_def.get('fields', []):
             if field.get('in_filename'):
                 name = field.get('name')
@@ -274,7 +275,6 @@ class FormEngine:
                     cleaned = self._sanitize_for_filename(value)
                     if cleaned:
                         parts.append(cleaned)
-        parts.append(str(int(time.time())))
         return parts
 
     def _store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str]) -> dict:
