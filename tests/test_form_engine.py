@@ -207,3 +207,25 @@ def test_start_reload_watcher_detects_new_file(tmp_path):
 
     assert "new_form" in engine.forms
 
+
+def test_start_reload_watcher_detects_deleted_file(tmp_path):
+    """Tests that the watcher removes a form when its YAML file is deleted."""
+    yaml_file = tmp_path / "del_form.yaml"
+    yaml_file.write_text("form_id: del_form\nfields: []")
+
+    engine = FormEngine(forms_dir=str(tmp_path), config=AppSettings().model_dump())
+    assert "del_form" in engine.forms
+
+    engine._start_reload_watcher(interval=0.1)
+
+    yaml_file.unlink()
+
+    # Wait for the watcher to detect the deletion
+    deadline = time.time() + 3
+    while time.time() < deadline:
+        if "del_form" not in engine.forms:
+            break
+        time.sleep(0.05)
+
+    assert "del_form" not in engine.forms
+

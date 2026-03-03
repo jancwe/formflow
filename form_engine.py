@@ -74,6 +74,7 @@ class FormEngine:
         if not os.path.exists(self.forms_dir):
             os.makedirs(self.forms_dir)
             
+        self.forms = {}
         logger.info(f"Lade Formulare aus Verzeichnis: {self.forms_dir}")
         sorted_files = sorted(os.listdir(self.forms_dir))
         logger.info(f"Gefundene Dateien: {sorted_files}")
