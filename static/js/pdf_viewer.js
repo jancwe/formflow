@@ -25,12 +25,15 @@ document.addEventListener('DOMContentLoaded', () => {
         rendering = true;
 
         pdfDoc.getPage(pageNum).then(page => {
+            const devicePixelRatio = window.devicePixelRatio || 1;
             const containerWidth = canvas.parentElement.clientWidth || DEFAULT_CONTAINER_WIDTH;
             const scale = containerWidth / page.getViewport({ scale: 1 }).width;
-            const viewport = page.getViewport({ scale });
+            const viewport = page.getViewport({ scale: scale * devicePixelRatio });
 
             canvas.width = viewport.width;
             canvas.height = viewport.height;
+            canvas.style.width = `${viewport.width / devicePixelRatio}px`;
+            canvas.style.height = `${viewport.height / devicePixelRatio}px`;
 
             return page.render({ canvasContext: ctx, viewport }).promise;
         }).then(() => {
