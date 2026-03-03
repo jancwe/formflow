@@ -1,3 +1,4 @@
+import glob
 import os
 import logging
 import re
@@ -35,6 +36,8 @@ class FormEngine:
         self.app = app
         # Make sure the pdfs directory exists
         os.makedirs('pdfs', exist_ok=True)
+        # Bereinige verwaiste temp-Dateien von vorherigen Läufen beim Start
+        self._cleanup_temp_files()
         self._register_routes()
 
         
@@ -106,6 +109,8 @@ class FormEngine:
         @self.app.route('/preview/<form_id>', methods=['POST'])
         def preview_form(form_id: str):
             """Generiert eine Vorschau des ausgefüllten Formulars"""
+            # Lazily bereinige verwaiste temp-Dateien (z.B. nach Browser-Abbruch)
+            self._cleanup_temp_files()
             if form_id not in self.forms:
                 return "Formular nicht gefunden", 404
                 
@@ -173,6 +178,25 @@ class FormEngine:
             return redirect(url_for('show_form', form_id=form_id))
 
     # --- Hilfsfunktionen --------------------------------------------------
+    def _cleanup_temp_files(self, max_age_seconds: int = 3600) -> None:
+        """Löscht verwaiste temporäre PDFs, die älter als max_age_seconds sind.
+
+        Notwendig, da temp_*.pdf-Dateien bei Browser-Abbrüchen oder Session-Timeouts
+        nie bereinigt werden und den Disk-Speicher des Hosts erschöpfen können.
+        """
+        now = time.time()
+        cleaned = 0
+        for path in glob.glob("pdfs/temp_*.pdf"):
+            try:
+                if now - os.path.getmtime(path) > max_age_seconds:
+                    os.remove(path)
+                    logger.info(f"Verwaiste temp-Datei gelöscht: {path}")
+                    cleaned += 1
+            except OSError as e:
+                logger.warning(f"Konnte temp-Datei nicht löschen {path}: {e}")
+        if cleaned:
+            logger.info(f"Cleanup: {cleaned} verwaiste temp-Datei(en) gelöscht.")
+
     def _sanitize_for_filename(self, value: str) -> str:
         """Bereinigt Text, sodass er in einem Dateinamen verwendet werden kann."""
         clean = value.replace(' ', '_')

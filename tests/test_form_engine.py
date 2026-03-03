@@ -141,3 +141,67 @@ def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_pat
     assert "warning" in result
     assert "SMB-Server" in result["warning"]
     assert "fallback.pdf" in result["warning"]
+
+def test_cleanup_temp_files_removes_old_files(form_engine, tmp_path, monkeypatch):
+    """Tests that _cleanup_temp_files removes temp files older than the threshold."""
+    monkeypatch.chdir(tmp_path)
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir()
+
+    old_file = pdfs_dir / "temp_old.pdf"
+    old_file.touch()
+    recent_file = pdfs_dir / "temp_recent.pdf"
+    recent_file.touch()
+    non_temp_file = pdfs_dir / "final_doc.pdf"
+    non_temp_file.touch()
+
+    now = 1000000.0
+    # old_file is 2 hours old, recent_file is 30 minutes old
+    monkeypatch.setattr("os.path.getmtime", lambda path: now - 7200 if "old" in path else now - 1800)
+    monkeypatch.setattr(time, "time", lambda: now)
+
+    form_engine._cleanup_temp_files(max_age_seconds=3600)
+
+    assert not old_file.exists()
+    assert recent_file.exists()
+    assert non_temp_file.exists()
+
+def test_cleanup_temp_files_keeps_young_files(form_engine, tmp_path, monkeypatch):
+    """Tests that _cleanup_temp_files does not remove files newer than the threshold."""
+    monkeypatch.chdir(tmp_path)
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir()
+
+    young_file = pdfs_dir / "temp_young.pdf"
+    young_file.touch()
+
+    now = 1000000.0
+    monkeypatch.setattr("os.path.getmtime", lambda path: now - 60)
+    monkeypatch.setattr(time, "time", lambda: now)
+
+    form_engine._cleanup_temp_files(max_age_seconds=3600)
+
+    assert young_file.exists()
+
+def test_cleanup_temp_files_handles_oserror(form_engine, tmp_path, monkeypatch, caplog):
+    """Tests that _cleanup_temp_files logs a warning and continues on OSError."""
+    import logging
+    monkeypatch.chdir(tmp_path)
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir()
+
+    error_file = pdfs_dir / "temp_error.pdf"
+    error_file.touch()
+
+    now = 1000000.0
+    monkeypatch.setattr("os.path.getmtime", lambda path: now - 7200)
+    monkeypatch.setattr(time, "time", lambda: now)
+    def raise_oserror(path):
+        raise OSError("Permission denied")
+
+    monkeypatch.setattr("os.remove", raise_oserror)
+
+    with caplog.at_level(logging.WARNING):
+        form_engine._cleanup_temp_files(max_age_seconds=3600)
+
+    assert any("Konnte temp-Datei nicht löschen" in r.message for r in caplog.records)
