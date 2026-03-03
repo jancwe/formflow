@@ -20,6 +20,8 @@ class FormEngine:
         self._config = config
         self.forms: Dict[str, Any] = {}
         self.pdf_generator = PdfGenerator()
+        # SMB session is registered lazily on first use and reused for subsequent uploads.
+        self._smb_session_registered: bool = False
         self._load_forms()
 
     @property
@@ -249,13 +251,27 @@ class FormEngine:
             raise RuntimeError("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
 
         try:
-            smbclient.register_session(server, username=username, password=password)
+            # Register the SMB session lazily on first use; skip if already registered.
+            if not self._smb_session_registered:
+                smbclient.register_session(server, username=username, password=password)
+                self._smb_session_registered = True
+
             folder_part = f"\\{folder}" if folder else ""
             remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
 
-            with open(temp_path, 'rb') as local_file:
-                with smbclient.open_file(remote_path, mode='wb') as remote_file:
-                    remote_file.write(local_file.read())
+            try:
+                with open(temp_path, 'rb') as local_file:
+                    with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                        remote_file.write(local_file.read())
+            except Exception:
+                # Session may have expired or been disconnected; attempt to re-register once.
+                logger.info("SMB-Verbindung unterbrochen oder Session abgelaufen. Versuche erneute Session-Registrierung.")
+                self._smb_session_registered = False
+                smbclient.register_session(server, username=username, password=password)
+                self._smb_session_registered = True
+                with open(temp_path, 'rb') as local_file:
+                    with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                        remote_file.write(local_file.read())
 
             logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
             os.remove(temp_path)
