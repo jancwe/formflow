@@ -108,7 +108,7 @@ def test_smb_fallback_when_server_offline():
         # 6. Dateiname aus der Warnung extrahieren und prüfen ob die Datei lokal existiert
         # Der Dateiname steht im HTML nach "gespeichert unter: "
         import re
-        match = re.search(r'gespeichert unter: (notebook_handover_fallback-test[^<\s]+\.pdf)', html)
+        match = re.search(r'gespeichert unter: (\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_notebook_handover_fallback-test[^<\s]*\.pdf)', html)
         assert match, "Dateiname konnte nicht aus der Warnung extrahiert werden."
         local_filename = match.group(1)
 
