@@ -123,14 +123,12 @@ fields:
   # ... Feld-Definitionen ...
 ```
 
-| Schlüssel | Typ | Pflicht | Beschreibung |
-|---|---|---|---|
-| `title` | String | Ja | Titel des Formulars, wird im Browser und im PDF angezeigt |
-| `description` | String | Nein | Optionale Beschreibung, die unterhalb des Titels angezeigt wird |
-| `form_id` | String | Ja | Eindeutige ID des Formulars (keine Leerzeichen), wird in der URL und im Dateinamen verwendet |
-| `submit_button` | String | Ja | Beschriftung des Absenden-Buttons |
-| `pdf_template` | String | Nein | Dateiname des zu verwendenden PDF-Templates aus dem Ordner `pdf_templates/`. Standard: `default_pdf.html` |
-| `fields` | Liste | Ja | Liste der Felder des Formulars |
+*   `title` (String, Pflicht): Titel des Formulars, wird im Browser und im PDF angezeigt.
+*   `description` (String, Optional): Optionale Beschreibung, die unterhalb des Titels angezeigt wird.
+*   `form_id` (String, Pflicht): Eindeutige ID des Formulars (keine Leerzeichen), wird in der URL und im Dateinamen verwendet.
+*   `submit_button` (String, Pflicht): Beschriftung des Absenden-Buttons.
+*   `pdf_template` (String, Optional): Dateiname des zu verwendenden PDF-Templates aus dem Ordner `pdf_templates/`. Standard: `default_pdf.html`.
+*   `fields` (Liste, Pflicht): Liste der Felder des Formulars.
 
 ### Verfügbare Feld-Optionen
 
