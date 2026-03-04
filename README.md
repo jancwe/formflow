@@ -123,6 +123,15 @@ fields:
   # ... Feld-Definitionen ...
 ```
 
+| Schlüssel | Typ | Pflicht | Beschreibung |
+|---|---|---|---|
+| `title` | String | Ja | Titel des Formulars, wird im Browser und im PDF angezeigt |
+| `description` | String | Nein | Optionale Beschreibung, die unterhalb des Titels angezeigt wird |
+| `form_id` | String | Ja | Eindeutige ID des Formulars (keine Leerzeichen), wird in der URL und im Dateinamen verwendet |
+| `submit_button` | String | Ja | Beschriftung des Absenden-Buttons |
+| `pdf_template` | String | Nein | Dateiname des zu verwendenden PDF-Templates aus dem Ordner `pdf_templates/`. Standard: `default_pdf.html` |
+| `fields` | Liste | Ja | Liste der Felder des Formulars |
+
 ### Verfügbare Feld-Optionen
 
 Jedes Feld unter `fields:` unterstützt folgende Basis-Attribute:
@@ -132,6 +141,7 @@ Jedes Feld unter `fields:` unterstützt folgende Basis-Attribute:
 *   `label` (String, Pflicht): Die Beschriftung, die dem Benutzer angezeigt wird.
 *   `required` (Boolean, Optional): Wenn `true`, muss das Feld ausgefüllt werden.
 *   `in_filename` (Boolean, Optional): Wenn `true`, wird der eingegebene Wert Teil des generierten PDF-Dateinamens.
+*   `in_draft_title` (Boolean, Optional): Wenn `true`, wird der Wert dieses Feldes im Untertitel des Entwurfs in der Entwurfsübersicht angezeigt.
 
 #### Feldtyp: `text`
 Ein einfaches einzeiliges Textfeld.
@@ -143,6 +153,7 @@ Ein einfaches einzeiliges Textfeld.
     placeholder: Vollständiger Name des Benutzers
     in_filename: true
 ```
+*   `placeholder` (String, Optional): Platzhaltertext, der im leeren Eingabefeld angezeigt wird. Nur für den Typ `text` relevant.
 
 #### Feldtyp: `date`
 Ein Datumsauswahlfeld.
@@ -153,6 +164,7 @@ Ein Datumsauswahlfeld.
     required: true
     default: today # Setzt automatisch das heutige Datum
 ```
+*Hinweis: Aktuell wird als Wert für `default` ausschließlich `today` unterstützt.*
 
 #### Feldtyp: `select`
 Ein Dropdown-Menü oder eine Checkbox-Liste.
@@ -166,6 +178,8 @@ Ein Dropdown-Menü oder eine Checkbox-Liste.
       - Gebrauchsspuren
       - Defekt
 ```
+*   `options` (Liste von Strings, Pflicht): Die zur Auswahl stehenden Werte.
+
 **Mehrfachauswahl:** Füge `multiple: true` hinzu, um das Feld als Liste von Checkboxes zu rendern, bei denen der Benutzer mehrere Optionen wählen kann.
 ```yaml
   - type: select
@@ -187,4 +201,5 @@ Ein Zeichenfeld für digitale Unterschriften.
     required: true
     height: 200px # Höhe des Zeichenbereichs
 ```
+*   `height` (String, Pflicht): Höhe des Zeichenbereichs als CSS-Wert, z.B. `200px`. Fehlt dieses Attribut, ist der Zeichenbereich unsichtbar.
 *Hinweis: Ein Formular kann beliebig viele Unterschriftsfelder enthalten.*
