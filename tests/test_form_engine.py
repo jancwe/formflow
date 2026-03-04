@@ -40,13 +40,21 @@ def test_generate_filename_parts(form_engine, monkeypatch):
         "empty_field": ""
     }
 
-    # Mock time.time() to have a predictable timestamp
-    monkeypatch.setattr(time, "time", lambda: 1234567890)
+    # Mock datetime.now() to have a predictable timestamp
+    import form_engine as fe_module
+    from datetime import datetime as real_datetime
+
+    class FakeDatetime(real_datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 1, 30, 8, 0, 0)
+
+    monkeypatch.setattr(fe_module, "datetime", FakeDatetime)
 
     parts = form_engine._generate_filename_parts("my-form", form_def, form_data)
 
-    # Expected: ['my-form', 'Max_Mustermann', 'ITSupport', '1234567890']
-    assert parts == ["my-form", "Max_Mustermann", "ITSupport", "1234567890"]
+    # Expected: ['2026-01-30_08-00', 'my-form', 'Max_Mustermann', 'ITSupport']
+    assert parts == ["2026-01-30_08-00", "my-form", "Max_Mustermann", "ITSupport"]
 
 def test_store_pdf_locally(form_engine, mocker, tmp_path):
     """Tests that the PDF is stored locally when SMB is disabled."""
