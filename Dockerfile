@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.version="0.1.0"
 LABEL org.opencontainers.image.title="formflow"
