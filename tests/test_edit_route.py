@@ -3,8 +3,8 @@ import os
 import pytest
 
 from flask import Flask
-from config import AppSettings
-from form_engine import FormEngine
+from formflow.config import AppSettings
+from formflow.form_engine import FormEngine
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ def app(tmp_path, monkeypatch):
 
     flask_app = Flask(
         __name__,
-        template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
+        template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"),
     )
     flask_app.config["TESTING"] = True
 
@@ -143,7 +143,7 @@ class TestEditFormRoute:
 class TestPreviewMultiSelect:
     def test_preview_stores_multiselect_as_list(self, client, tmp_path, mocker):
         """preview_form should store multi-select values as a list, not a joined string."""
-        mocker.patch("pdf_generator.PdfGenerator.generate")
+        mocker.patch("formflow.pdf_generator.PdfGenerator.generate")
 
         response = client.post(
             "/preview/test_form",
@@ -157,3 +157,23 @@ class TestPreviewMultiSelect:
         # Should NOT have a single comma-separated hidden field
         assert 'value="IT, Finance"' not in html
         assert 'value="Finance, IT"' not in html
+
+    def test_preview_pdf_is_accessible(self, client, tmp_path, mocker):
+        """After POST /preview/<form_id>, the PDF referenced by the preview must be accessible via GET /pdf/temp_<uuid>.pdf."""
+        mocker.patch("formflow.pdf_generator.PdfGenerator.generate")
+
+        # Intercept uuid generation so we know the filename in advance
+        fixed_uuid = "deadbeef1234567890abcdef12345678"
+        mocker.patch("formflow.form_engine.uuid.uuid4", return_value=mocker.Mock(hex=fixed_uuid))
+
+        # Pre-create the temp PDF that the (mocked) generator would have written
+        pdfs_dir = tmp_path / "pdfs"
+        pdfs_dir.mkdir(exist_ok=True)
+        (pdfs_dir / f"temp_{fixed_uuid}.pdf").write_bytes(b"%PDF-1.4 preview content")
+
+        response = client.post("/preview/test_form", data={"name": "Test"})
+        assert response.status_code == 200
+
+        pdf_response = client.get(f"/pdf/temp_{fixed_uuid}.pdf")
+        assert pdf_response.status_code == 200
+        assert b"%PDF-1.4 preview content" in pdf_response.data

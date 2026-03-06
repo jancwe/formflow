@@ -10,8 +10,9 @@ from datetime import date, datetime
 from typing import Dict, Any, Optional
 import yaml
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
-from pdf_generator import PdfGenerator
-from services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
+from werkzeug.utils import secure_filename
+from .pdf_generator import PdfGenerator
+from .services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
@@ -82,7 +83,8 @@ class FormEngine:
         @self.app.route('/pdf/<filename>')
         def serve_pdf(filename):
             """Stellt PDF-Dateien zur Verfügung"""
-            return send_from_directory('pdfs', filename)
+            safe_filename = secure_filename(filename)
+            return send_from_directory(os.path.abspath('pdfs'), safe_filename)
         
         @self.app.route('/forms')
         def list_forms():
