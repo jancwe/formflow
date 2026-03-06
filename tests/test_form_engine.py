@@ -1,30 +1,18 @@
-import os
 import pytest
 import time
-from formflow.form_engine import FormEngine
 
 from formflow.config import AppSettings, ColorsConfig, SmbConfig
 
-@pytest.fixture
-def form_engine():
-    """
-    Provides a FormEngine instance with a default (empty) config for unit testing.
-    Tests that need specific configurations can create their own instance.
-    """
-    # For most unit tests, an empty config is sufficient
-    config = AppSettings().model_dump()
-    engine = FormEngine(config=config)
-    return engine
 
-def test_sanitize_for_filename(form_engine):
+def test_sanitize_for_filename(engine):
     """Tests the filename sanitization logic."""
-    assert form_engine._sanitize_for_filename("Simple Name") == "Simple_Name"
-    assert form_engine._sanitize_for_filename("With/Special\\Chars:?*\"<>|") == "WithSpecialChars"
-    assert form_engine._sanitize_for_filename("Umlaute-ÄÖÜ-ß") == "Umlaute--"
-    assert form_engine._sanitize_for_filename(" leading and trailing ") == "_leading_and_trailing_"
-    assert form_engine._sanitize_for_filename("file_name-123_ok") == "file_name-123_ok"
+    assert engine._sanitize_for_filename("Simple Name") == "Simple_Name"
+    assert engine._sanitize_for_filename("With/Special\\Chars:?*\"<>|") == "WithSpecialChars"
+    assert engine._sanitize_for_filename("Umlaute-ÄÖÜ-ß") == "Umlaute--"
+    assert engine._sanitize_for_filename(" leading and trailing ") == "_leading_and_trailing_"
+    assert engine._sanitize_for_filename("file_name-123_ok") == "file_name-123_ok"
 
-def test_generate_filename_parts(form_engine, monkeypatch):
+def test_generate_filename_parts(engine, monkeypatch):
     """Tests the logic for generating filename parts from form data."""
     form_def = {
         "fields": [
@@ -52,12 +40,12 @@ def test_generate_filename_parts(form_engine, monkeypatch):
 
     monkeypatch.setattr(fe_module, "datetime", FakeDatetime)
 
-    parts = form_engine._generate_filename_parts("my-form", form_def, form_data)
+    parts = engine._generate_filename_parts("my-form", form_def, form_data)
 
     # Expected: ['2026-01-30_08-00', 'my-form', 'Max_Mustermann', 'ITSupport']
     assert parts == ["2026-01-30_08-00", "my-form", "Max_Mustermann", "ITSupport"]
 
-def test_store_pdf_locally(form_engine, mocker, tmp_path):
+def test_store_pdf_locally(engine, mocker, tmp_path):
     """Tests that the PDF is stored locally when SMB is disabled."""
     # Create a dummy temp file
     temp_file = tmp_path / "temp.pdf"
@@ -67,16 +55,16 @@ def test_store_pdf_locally(form_engine, mocker, tmp_path):
     mock_rename = mocker.patch("os.rename")
 
     # Provide a specific config for this test case
-    form_engine.config = AppSettings(smb=SmbConfig(enabled=False)).model_dump()
+    engine.config = AppSettings(smb=SmbConfig(enabled=False)).model_dump()
 
-    result = form_engine._store_pdf(str(temp_file), "/path/to/final.pdf", [])
+    result = engine._store_pdf(str(temp_file), "/path/to/final.pdf", [])
 
     # Assert that os.rename was called with the correct arguments
     mock_rename.assert_called_once_with(str(temp_file), "/path/to/final.pdf")
     assert result["stored_via"] == "local"
     assert result["filename"] == "final.pdf"
 
-def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
+def test_store_pdf_smb_success(engine, mocker, tmp_path):
     """Tests a successful PDF upload to an SMB share."""
     # Create a dummy temp file
     temp_file = tmp_path / "temp.pdf"
@@ -96,10 +84,10 @@ def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
         username="testuser",
         password="testpass"
     )
-    form_engine.config = AppSettings(smb=smb_config).model_dump()
+    engine.config = AppSettings(smb=smb_config).model_dump()
 
     filename_parts = ["notebook_handover", "test-user", "12345"]
-    result = form_engine._store_pdf(str(temp_file), "", filename_parts)
+    result = engine._store_pdf(str(temp_file), "", filename_parts)
 
     # Assert that the session was registered
     mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
@@ -114,17 +102,17 @@ def test_store_pdf_smb_success(form_engine, mocker, tmp_path):
 
     assert result["stored_via"] == "smb"
 
-def test_store_pdf_smb_missing_config_raises_error(form_engine):
+def test_store_pdf_smb_missing_config_raises_error(engine):
     """
     Tests that a RuntimeError is raised if SMB is enabled but config is incomplete.
     """
     # Provide a specific incomplete config for this test case
-    form_engine.config = AppSettings(smb=SmbConfig(enabled=True)).model_dump()
+    engine.config = AppSettings(smb=SmbConfig(enabled=True)).model_dump()
 
     with pytest.raises(RuntimeError, match="SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen."):
-        form_engine._store_pdf("/dummy/path.pdf", "", [])
+        engine._store_pdf("/dummy/path.pdf", "", [])
 
-def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_path):
+def test_store_pdf_smb_fallback_on_connection_error(engine, mocker, tmp_path):
     """Tests that a failed SMB upload falls back to local storage with a warning."""
     temp_file = tmp_path / "temp.pdf"
     temp_file.write_text("PDF content")
@@ -141,9 +129,9 @@ def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_pat
         username="testuser",
         password="testpass"
     )
-    form_engine.config = AppSettings(smb=smb_config).model_dump()
+    engine.config = AppSettings(smb=smb_config).model_dump()
 
-    result = form_engine._store_pdf(str(temp_file), "/path/to/fallback.pdf", ["test"])
+    result = engine._store_pdf(str(temp_file), "/path/to/fallback.pdf", ["test"])
 
     mock_rename.assert_called_once_with(str(temp_file), "/path/to/fallback.pdf")
     assert result["stored_via"] == "local"
@@ -151,7 +139,7 @@ def test_store_pdf_smb_fallback_on_connection_error(form_engine, mocker, tmp_pat
     assert "SMB-Server" in result["warning"]
     assert "fallback.pdf" in result["warning"]
 
-def test_cleanup_temp_files_removes_old_files(form_engine, tmp_path, monkeypatch):
+def test_cleanup_temp_files_removes_old_files(engine, tmp_path, monkeypatch):
     """Tests that _cleanup_temp_files removes temp files older than the threshold."""
     monkeypatch.chdir(tmp_path)
     pdfs_dir = tmp_path / "pdfs"
@@ -169,13 +157,13 @@ def test_cleanup_temp_files_removes_old_files(form_engine, tmp_path, monkeypatch
     monkeypatch.setattr("os.path.getmtime", lambda path: now - 7200 if "old" in path else now - 1800)
     monkeypatch.setattr(time, "time", lambda: now)
 
-    form_engine._cleanup_temp_files(max_age_seconds=3600)
+    engine._cleanup_temp_files(max_age_seconds=3600)
 
     assert not old_file.exists()
     assert recent_file.exists()
     assert non_temp_file.exists()
 
-def test_cleanup_temp_files_keeps_young_files(form_engine, tmp_path, monkeypatch):
+def test_cleanup_temp_files_keeps_young_files(engine, tmp_path, monkeypatch):
     """Tests that _cleanup_temp_files does not remove files newer than the threshold."""
     monkeypatch.chdir(tmp_path)
     pdfs_dir = tmp_path / "pdfs"
@@ -188,11 +176,11 @@ def test_cleanup_temp_files_keeps_young_files(form_engine, tmp_path, monkeypatch
     monkeypatch.setattr("os.path.getmtime", lambda path: now - 60)
     monkeypatch.setattr(time, "time", lambda: now)
 
-    form_engine._cleanup_temp_files(max_age_seconds=3600)
+    engine._cleanup_temp_files(max_age_seconds=3600)
 
     assert young_file.exists()
 
-def test_cleanup_temp_files_handles_oserror(form_engine, tmp_path, monkeypatch, caplog):
+def test_cleanup_temp_files_handles_oserror(engine, tmp_path, monkeypatch, caplog):
     """Tests that _cleanup_temp_files logs a warning and continues on OSError."""
     import logging
     monkeypatch.chdir(tmp_path)
@@ -211,10 +199,10 @@ def test_cleanup_temp_files_handles_oserror(form_engine, tmp_path, monkeypatch, 
     monkeypatch.setattr("os.remove", raise_oserror)
 
     with caplog.at_level(logging.WARNING):
-        form_engine._cleanup_temp_files(max_age_seconds=3600)
+        engine._cleanup_temp_files(max_age_seconds=3600)
 
     assert any("Konnte temp-Datei nicht löschen" in r.message for r in caplog.records)
-def test_store_pdf_smb_session_reused(form_engine, mocker, tmp_path):
+def test_store_pdf_smb_session_reused(engine, mocker, tmp_path):
     """Tests that the SMB session is registered only once across multiple uploads."""
     smb_config = SmbConfig(
         enabled=True,
@@ -224,7 +212,7 @@ def test_store_pdf_smb_session_reused(form_engine, mocker, tmp_path):
         username="testuser",
         password="testpass"
     )
-    form_engine.config = AppSettings(smb=smb_config).model_dump()
+    engine.config = AppSettings(smb=smb_config).model_dump()
 
     mock_register = mocker.patch("smbclient.register_session")
     m = mocker.mock_open()
@@ -233,12 +221,12 @@ def test_store_pdf_smb_session_reused(form_engine, mocker, tmp_path):
     for i in range(3):
         temp_file = tmp_path / f"temp{i}.pdf"
         temp_file.write_text("PDF content")
-        form_engine._store_pdf(str(temp_file), "", [f"file{i}"])
+        engine._store_pdf(str(temp_file), "", [f"file{i}"])
 
     # register_session should only be called once regardless of upload count
     mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
 
-def test_store_pdf_smb_reregisters_on_session_expiry(form_engine, mocker, tmp_path):
+def test_store_pdf_smb_reregisters_on_session_expiry(engine, mocker, tmp_path):
     """Tests that an expired session is re-registered once and the upload retried."""
     temp_file = tmp_path / "temp.pdf"
     temp_file.write_text("PDF content")
@@ -251,10 +239,10 @@ def test_store_pdf_smb_reregisters_on_session_expiry(form_engine, mocker, tmp_pa
         username="testuser",
         password="testpass"
     )
-    form_engine.config = AppSettings(smb=smb_config).model_dump()
+    engine.config = AppSettings(smb=smb_config).model_dump()
 
     # Simulate a session that is already registered
-    form_engine._smb_session_registered = True
+    engine._smb_session_registered = True
 
     mock_register = mocker.patch("smbclient.register_session")
     m = mocker.mock_open()
@@ -269,14 +257,14 @@ def test_store_pdf_smb_reregisters_on_session_expiry(form_engine, mocker, tmp_pa
 
     mocker.patch("os.remove")
 
-    result = form_engine._store_pdf(str(temp_file), "", ["refile"])
+    result = engine._store_pdf(str(temp_file), "", ["refile"])
 
     # register_session should have been called once (for re-registration)
     mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
-    assert form_engine._smb_session_registered is True
+    assert engine._smb_session_registered is True
     assert result["stored_via"] == "smb"
 
-def test_store_pdf_smb_flag_reset_on_fallback(form_engine, mocker, tmp_path):
+def test_store_pdf_smb_flag_reset_on_fallback(engine, mocker, tmp_path):
     """Tests that _smb_session_registered is reset to False after a failed upload."""
     temp_file = tmp_path / "temp.pdf"
     temp_file.write_text("PDF content")
@@ -289,16 +277,16 @@ def test_store_pdf_smb_flag_reset_on_fallback(form_engine, mocker, tmp_path):
         username="testuser",
         password="testpass"
     )
-    form_engine.config = AppSettings(smb=smb_config).model_dump()
+    engine.config = AppSettings(smb=smb_config).model_dump()
 
     mocker.patch("smbclient.register_session", side_effect=ConnectionError("refused"))
     mocker.patch("os.rename")
 
-    assert form_engine._smb_session_registered is False
-    form_engine._store_pdf(str(temp_file), "/fallback.pdf", ["f"])
+    assert engine._smb_session_registered is False
+    engine._store_pdf(str(temp_file), "/fallback.pdf", ["f"])
 
     # Flag should remain False so the next call re-attempts registration
-    assert form_engine._smb_session_registered is False
+    assert engine._smb_session_registered is False
 
 def test_colors_config_includes_bg_gray():
     """Tests that ColorsConfig includes the bg_gray field used by templates."""
@@ -310,32 +298,14 @@ def test_colors_config_includes_bg_gray():
     assert dumped["colors"]["bg_gray"] == "#eee"
 
 
-def test_serve_pdf_route(tmp_path, monkeypatch):
+def test_serve_pdf_route(client, engine_with_app, tmp_path):
     """Tests that GET /pdf/<filename> serves files from the pdfs/ directory."""
-    monkeypatch.chdir(tmp_path)
-
-    from flask import Flask
-
-    flask_app = Flask(
-        __name__,
-        template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"),
-    )
-    flask_app.config["TESTING"] = True
-
-    config = AppSettings().model_dump()
-    flask_app.config["formflow"] = config
-
-    engine = FormEngine(forms_dir="forms", config=config)
-    engine.forms = {}
-    engine.init_app(flask_app)
-
     # Create a dummy PDF file in the pdfs directory
     pdfs_dir = tmp_path / "pdfs"
     pdfs_dir.mkdir(exist_ok=True)
     test_pdf = pdfs_dir / "temp_test123.pdf"
     test_pdf.write_bytes(b"%PDF-1.4 dummy content")
 
-    client = flask_app.test_client()
     response = client.get("/pdf/temp_test123.pdf")
 
     assert response.status_code == 200

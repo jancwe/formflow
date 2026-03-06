@@ -1,10 +1,7 @@
 """Integration tests for the draft routes in FormEngine."""
 import json
-import os
 import pytest
 
-from flask import Flask
-from formflow.config import AppSettings
 from formflow.form_engine import FormEngine
 from formflow.services import save_draft
 
@@ -49,30 +46,11 @@ FORM_WITH_MULTISELECT = {
 
 
 @pytest.fixture
-def app_with_drafts(tmp_path, monkeypatch):
-    """
-    Creates a Flask test app with a FormEngine configured for a single test
-    form. Changes the working directory to tmp_path so that the hardcoded
-    'drafts/' and 'pdfs/' paths resolve inside the temporary directory.
-    """
-    monkeypatch.chdir(tmp_path)
-
-    flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"))
-    flask_app.config["TESTING"] = True
-
-    config = AppSettings().model_dump()
-    flask_app.config["formflow"] = config
-
-    engine = FormEngine(forms_dir="forms", config=config)
+def client(app, engine):
+    """Client with draft/multi test forms registered via the shared app fixture."""
     engine.forms = {"test_form": SIMPLE_FORM, "multi_form": FORM_WITH_MULTISELECT}
-    engine.init_app(flask_app)
-
-    return flask_app
-
-
-@pytest.fixture
-def client(app_with_drafts):
-    return app_with_drafts.test_client()
+    engine.init_app(app)
+    return app.test_client()
 
 
 @pytest.fixture
