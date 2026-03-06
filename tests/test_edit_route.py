@@ -164,7 +164,7 @@ class TestPreviewMultiSelect:
 
         # Intercept uuid generation so we know the filename in advance
         fixed_uuid = "deadbeef1234567890abcdef12345678"
-        mocker.patch("formflow.form_engine.uuid.uuid4", return_value=mocker.Mock(hex=fixed_uuid))
+        mocker.patch("formflow.routes.uuid.uuid4", return_value=mocker.Mock(hex=fixed_uuid))
 
         # Pre-create the temp PDF that the (mocked) generator would have written
         pdfs_dir = tmp_path / "pdfs"
