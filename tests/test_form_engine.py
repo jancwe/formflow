@@ -1,3 +1,4 @@
+import os
 import pytest
 import time
 from formflow.form_engine import FormEngine
@@ -307,3 +308,35 @@ def test_colors_config_includes_bg_gray():
     settings = AppSettings(colors=ColorsConfig(bg_gray="#eee"))
     dumped = settings.model_dump()
     assert dumped["colors"]["bg_gray"] == "#eee"
+
+
+def test_serve_pdf_route(tmp_path, monkeypatch):
+    """Tests that GET /pdf/<filename> serves files from the pdfs/ directory."""
+    monkeypatch.chdir(tmp_path)
+
+    from flask import Flask
+
+    flask_app = Flask(
+        __name__,
+        template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"),
+    )
+    flask_app.config["TESTING"] = True
+
+    config = AppSettings().model_dump()
+    flask_app.config["formflow"] = config
+
+    engine = FormEngine(forms_dir="forms", config=config)
+    engine.forms = {}
+    engine.init_app(flask_app)
+
+    # Create a dummy PDF file in the pdfs directory
+    pdfs_dir = tmp_path / "pdfs"
+    pdfs_dir.mkdir(exist_ok=True)
+    test_pdf = pdfs_dir / "temp_test123.pdf"
+    test_pdf.write_bytes(b"%PDF-1.4 dummy content")
+
+    client = flask_app.test_client()
+    response = client.get("/pdf/temp_test123.pdf")
+
+    assert response.status_code == 200
+    assert b"%PDF-1.4 dummy content" in response.data
