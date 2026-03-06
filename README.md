@@ -2,15 +2,15 @@
 
 **Version: 0.1.0**
 
-formflow ist eine leichtgewichtige, dockerisierte Webanwendung zur digitalen Erfassung von Formulardaten (z.B. Hardware-Übergabeprotokolle) inklusive digitaler Unterschrift. 
+formflow ist eine leichtgewichtige, dockerisierte Webanwendung zur digitalen Erfassung von Formulardaten inklusive digitaler Unterschrift. 
 
-Die Anwendung generiert aus den eingegebenen Daten automatisch ein professionelles, an die Corporate Identity angepasstes PDF-Dokument und speichert dieses auf dem Server.
+Die Anwendung generiert aus den eingegebenen Daten automatisch ein an die Corporate Identity angepasstes PDF-Dokument und speichert dieses auf dem Server.
 
 ## Hauptfunktionen
 
-*   **Dynamische Formulare:** Formulare werden komplett über einfache YAML-Dateien definiert. Kein Programmieren nötig!
+*   **Dynamische Formulare:** Formulare werden komplett über einfache YAML-Dateien definiert.
 *   **Digitale Unterschrift:** Touch-optimiertes Unterschriftenfeld für Tablets und Smartphones.
-*   **PDF-Generierung:** Erstellt automatisch saubere PDFs (via WeasyPrint) basierend auf HTML-Templates.
+*   **PDF-Generierung:** Erstellt automatisch PDFs basierend auf HTML-Templates und zeigt diese dem Benutzer zur Gegenprobe, bevor das Formular endgültig zum Speichern eingereicht wird.
 *   **Corporate Identity:** Farben, Logos und Firmennamen können zentral konfiguriert werden.
 *   **Offline-Fähig:** Alle Abhängigkeiten werden lokal ausgeliefert, ideal für Intranet-Umgebungen.
 
