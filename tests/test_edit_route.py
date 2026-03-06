@@ -3,8 +3,8 @@ import os
 import pytest
 
 from flask import Flask
-from config import AppSettings
-from form_engine import FormEngine
+from formflow.config import AppSettings
+from formflow.form_engine import FormEngine
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ def app(tmp_path, monkeypatch):
 
     flask_app = Flask(
         __name__,
-        template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
+        template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"),
     )
     flask_app.config["TESTING"] = True
 
@@ -143,7 +143,7 @@ class TestEditFormRoute:
 class TestPreviewMultiSelect:
     def test_preview_stores_multiselect_as_list(self, client, tmp_path, mocker):
         """preview_form should store multi-select values as a list, not a joined string."""
-        mocker.patch("pdf_generator.PdfGenerator.generate")
+        mocker.patch("formflow.pdf_generator.PdfGenerator.generate")
 
         response = client.post(
             "/preview/test_form",

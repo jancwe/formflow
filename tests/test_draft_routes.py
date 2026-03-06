@@ -4,9 +4,9 @@ import os
 import pytest
 
 from flask import Flask
-from config import AppSettings
-from form_engine import FormEngine
-from services import save_draft
+from formflow.config import AppSettings
+from formflow.form_engine import FormEngine
+from formflow.services import save_draft
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ def app_with_drafts(tmp_path, monkeypatch):
     """
     monkeypatch.chdir(tmp_path)
 
-    flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"))
+    flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"))
     flask_app.config["TESTING"] = True
 
     config = AppSettings().model_dump()

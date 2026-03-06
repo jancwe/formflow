@@ -10,8 +10,8 @@ from datetime import date, datetime
 from typing import Dict, Any, Optional
 import yaml
 from flask import current_app, render_template, request, redirect, url_for, Flask, send_from_directory
-from pdf_generator import PdfGenerator
-from services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
+from .pdf_generator import PdfGenerator
+from .services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)

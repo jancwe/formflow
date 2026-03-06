@@ -1,8 +1,8 @@
 from flask import Flask
-from form_engine import FormEngine
+from .form_engine import FormEngine
 from pydantic import ValidationError
-from config import AppSettings
-from _version import __version__
+from .config import AppSettings
+from ._version import __version__
 
 def create_app():
     app = Flask(__name__)

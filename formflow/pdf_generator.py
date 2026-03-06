@@ -9,10 +9,12 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_PDF_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pdf_templates')
+
 class PdfGenerator:
     """Klasse zur Generierung von PDFs aus Formulardaten mittels WeasyPrint."""
     
-    def __init__(self, templates_dir: str = 'pdf_templates'):
+    def __init__(self, templates_dir: str = _DEFAULT_PDF_TEMPLATES_DIR):
         self.templates_dir = templates_dir
         self._env = Environment(
             loader=FileSystemLoader(templates_dir),

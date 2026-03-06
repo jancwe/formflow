@@ -1,8 +1,8 @@
 import pytest
 import time
-from form_engine import FormEngine
+from formflow.form_engine import FormEngine
 
-from config import AppSettings, ColorsConfig, SmbConfig
+from formflow.config import AppSettings, ColorsConfig, SmbConfig
 
 @pytest.fixture
 def form_engine():
@@ -41,7 +41,7 @@ def test_generate_filename_parts(form_engine, monkeypatch):
     }
 
     # Mock datetime.now() to have a predictable timestamp
-    import form_engine as fe_module
+    import formflow.form_engine as fe_module
     from datetime import datetime as real_datetime
 
     class FakeDatetime(real_datetime):
