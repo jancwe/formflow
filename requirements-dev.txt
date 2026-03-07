@@ -1,3 +1,4 @@
+# Dependencies are also defined in pyproject.toml – keep both in sync.
 pytest==9.0.2
 requests==2.32.5
 pytest-mock==3.15.1

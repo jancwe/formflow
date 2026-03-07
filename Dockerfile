@@ -1,5 +1,6 @@
 FROM python:3.14-slim
 
+# Version: keep in sync with formflow/_version.py and pyproject.toml
 LABEL org.opencontainers.image.version="0.1.0"
 LABEL org.opencontainers.image.title="formflow"
 LABEL org.opencontainers.image.description="Dynamischer Formular- & PDF-Generator"
