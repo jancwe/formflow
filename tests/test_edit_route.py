@@ -1,9 +1,6 @@
 """Integration tests for the edit_form route and multi-select handling in FormEngine."""
-import os
 import pytest
 
-from flask import Flask
-from formflow.config import AppSettings
 from formflow.form_engine import FormEngine
 
 
@@ -38,27 +35,10 @@ FORM_WITH_MULTISELECT = {
 
 
 @pytest.fixture
-def app(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-
-    flask_app = Flask(
-        __name__,
-        template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"),
-    )
-    flask_app.config["TESTING"] = True
-
-    config = AppSettings().model_dump()
-    flask_app.config["formflow"] = config
-
-    engine = FormEngine(forms_dir="forms", config=config)
+def client(app, engine):
+    """Client with the multiselect test form registered via the shared app fixture."""
     engine.forms = {"test_form": FORM_WITH_MULTISELECT}
-    engine.init_app(flask_app)
-
-    return flask_app
-
-
-@pytest.fixture
-def client(app):
+    engine.init_app(app)
     return app.test_client()
 
 
