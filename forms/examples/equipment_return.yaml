@@ -57,3 +57,4 @@ fields:
     label: Unterschrift
     required: true
     height: 200px
+    signature_label: "Digital unterzeichnet von {user} am {date_today}"

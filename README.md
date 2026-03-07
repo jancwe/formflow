@@ -220,6 +220,14 @@ Ein Zeichenfeld für digitale Unterschriften.
     label: Unterschrift Mitarbeiter
     required: true
     height: 200px # Höhe des Zeichenbereichs
+    signature_label: "Digital unterzeichnet von {user} am {date_today}"
 ```
 *   `height` (String, Pflicht): Höhe des Zeichenbereichs als CSS-Wert, z.B. `200px`. Fehlt dieses Attribut, ist der Zeichenbereich unsichtbar.
+*   `signature_label` (String, Optional): Beschriftungstext, der im PDF unterhalb des Unterschriftenfeldes erscheint.
+    *   Unterstützt `{feldname}`-Platzhalter, die durch den Wert des gleichnamigen Formularfeldes ersetzt werden (z.B. wird `{user}` durch den Wert des Feldes `user` ersetzt).
+    *   Der spezielle Platzhalter `{date_today}` wird durch das aktuelle Datum im Format `TT.MM.JJJJ` ersetzt.
+    *   Beispiel mit Feldwert-Variable: `"Digital unterzeichnet von {user} am {date_today}"`
+    *   Beispiel mit statischem Text: `"Ich bestätige die Richtigkeit der Angaben."`
+    *   Unbekannte Platzhalter bleiben unverändert erhalten.
+    *   Ohne Angabe wird ein systemseitiger Standardtext verwendet.
 *Hinweis: Ein Formular kann beliebig viele Unterschriftsfelder enthalten.*
