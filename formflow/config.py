@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class SmbConfig(BaseModel):
+    """SMB/CIFS share configuration for remote PDF storage."""
     enabled: bool = False
     server: str = ""
     share: str = ""
@@ -10,11 +11,13 @@ class SmbConfig(BaseModel):
     password: str = ""
 
 class CompanyConfig(BaseModel):
+    """Company branding shown in headers, footers and PDF documents."""
     name: str = ""
     address: str = ""
     logo_filename: str = ""
 
 class ColorsConfig(BaseModel):
+    """UI color scheme injected as CSS custom properties."""
     primary: str = ""
     text_dark: str = ""
     text_light: str = ""

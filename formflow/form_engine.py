@@ -52,8 +52,6 @@ class FormEngine:
         self._cleanup_temp_files()
         self._register_routes()
 
-        
-    
     def _load_forms(self) -> None:
         """Lädt alle YAML-Formulardefinitionen aus dem forms-Verzeichnis"""
         if not os.path.exists(self.forms_dir):

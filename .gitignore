@@ -1,11 +1,34 @@
-.env
-*.pdf
+# Python
 __pycache__/
-pdf_templates/default_pdf copy.html
-static/logo copy.png
-requirements.txt.bak
-Dockerfile.bak
-frontend-backup.tar.gz
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checking / Linting
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+*.env.local
+
+# Application data (runtime-generated)
+*.pdf
 forms/*.yaml
 !forms/examples/*.yaml
 drafts/
+
+# Backups (generic)
+*.bak
+*.tar.gz
