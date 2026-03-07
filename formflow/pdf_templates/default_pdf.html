@@ -197,7 +197,11 @@
                 {% endif %}
             </div>
             <div class="signature-meta">
-                Digital unterzeichnet von <strong>{{ form_data.get('user', 'Unbekannt') }}</strong> am {{ date_today }}
+                {% if field.signature_label_resolved is defined %}
+                    {{ field.signature_label_resolved }}
+                {% else %}
+                    Digital unterzeichnet von <strong>{{ form_data.get('user', 'Unbekannt') }}</strong> am {{ date_today }}
+                {% endif %}
             </div>
         </div>
         {% endif %}
