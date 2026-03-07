@@ -26,8 +26,8 @@ formflow ist eine leichtgewichtige, dockerisierte Webanwendung zur digitalen Erf
 ## Schnellstart
 
 ```bash
-# Container bauen und starten
-docker-compose up -d --build
+# Image aus der Registry ziehen und starten
+docker-compose pull && docker-compose up -d
 
 # Anwendung aufrufen
 # http://localhost:8080

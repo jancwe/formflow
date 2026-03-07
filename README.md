@@ -25,14 +25,16 @@ Das Projekt nutzt Docker (bzw. Podman) für ein einfaches Deployment.
 Für den normalen Betrieb wird die `docker-compose.yml` verwendet. Diese startet nur die `formflow-app`.
 
 ```bash
-# Container bauen und im Hintergrund starten
-docker-compose up -d --build
+# Image aus der Registry ziehen und im Hintergrund starten
+docker-compose pull && docker-compose up -d
 
 # Anwendung aufrufen
 # http://localhost:8080
 ```
 
 > **Hinweis:** Der Host-Port kann über die Variable `APP_HOST_PORT` in der `.env`-Datei konfiguriert werden (Standard: `8080`). Beispiel: `APP_HOST_PORT=9090`
+
+> **Automatische Updates mit Podman:** Das Container-Label `io.containers.autoupdate=registry` ist gesetzt. Mit `podman auto-update` werden neue Image-Versionen aus der Registry automatisch erkannt und eingespielt.
 
 ### Entwicklungsumgebung (mit SMB-Testserver)
 
@@ -63,7 +65,7 @@ docker-compose -f docker-compose.dev.yml up -d --build
 docker-compose -f docker-compose.dev.yml down
 ```
 
-*Hinweis: Wenn du Änderungen an `app.py`, `form_engine.py` oder den HTML-Templates im `templates/`-Ordner vornimmst, musst du den Container neu bauen (`--build`). Änderungen in `forms/`, `pdf_templates/` oder `.env` werden nach einem einfachen Neustart (`docker-compose restart formflow-app`) oder teilweise sofort wirksam.*
+*Hinweis: Wenn du Änderungen an `app.py`, `form_engine.py` oder den HTML-Templates im `templates/`-Ordner vornimmst, musst du den Container in der Entwicklungsumgebung neu bauen (`--build`). Änderungen in `forms/`, `pdf_templates/` oder `.env` werden nach einem einfachen Neustart (`docker-compose -f docker-compose.dev.yml restart formflow-app`) oder teilweise sofort wirksam. In der Produktionsumgebung wird das Image aus der Registry gezogen – dort ist kein lokaler Build nötig.*
 
 ---
 

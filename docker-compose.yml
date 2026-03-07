@@ -1,6 +1,8 @@
 services:
   formflow-app:
-    build: .
+    image: ghcr.io/jancwe/formflow:latest
+    labels:
+      io.containers.autoupdate: "registry"
     ports:
       - "${APP_HOST_PORT:-8080}:5000"
     env_file:
