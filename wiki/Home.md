@@ -26,7 +26,11 @@ formflow ist eine leichtgewichtige, dockerisierte Webanwendung zur digitalen Erf
 ## Schnellstart
 
 ```bash
-# Container bauen und starten
+# Fertiges Image verwenden (empfohlen)
+docker pull ghcr.io/jancwe/formflow:latest
+docker-compose up -d
+
+# Oder: Container selbst bauen und starten
 docker-compose up -d --build
 
 # Anwendung aufrufen
@@ -42,6 +46,7 @@ Weitere Installations- und Konfigurationshinweise finden sich in der README-Date
 | Artikel | Beschreibung |
 |---|---|
 | [Architektur](Architektur.md) | Technische Architektur der Webanwendung mit UML-Diagrammen |
+| <a>Branching-Strategie</a> | Branching-Modell und PR-Workflow für die Entwicklung |
 
 ---
 
@@ -57,6 +62,7 @@ Weitere Installations- und Konfigurationshinweise finden sich in der README-Date
 | Formulardefinitionen | YAML |
 | SMB-Zugriff | [smbprotocol](https://github.com/jborean93/smbprotocol) |
 | Containerisierung | Docker / Docker Compose |
+| Container Registry | <a href="https://ghcr.io/jancwe/formflow">GitHub Container Registry</a> |
 | Frontend-Framework | Bootstrap 5 |
 
 ---
