@@ -5,10 +5,12 @@ on:
     branches:
       - smb-server
       - main
+      - develop
   pull_request:
     branches:
       - smb-server
       - main
+      - develop
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
