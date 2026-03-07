@@ -337,3 +337,45 @@ graph TD
 ---
 
 *Zurück zur [Wiki-Startseite](Home.md)*
+
+---
+
+## 9. signature_label – Konfigurierbare Unterschriften-Beschriftung
+
+Das optionale YAML-Attribut `signature_label` erlaubt es, den Beschriftungstext unterhalb eines Unterschriftenfeldes im generierten PDF individuell zu gestalten. Der Text wird beim Rendern des PDFs mit aktuellen Formularfeldwerten interpoliert.
+
+### Interpolationsmechanismus
+
+1. `PdfGenerator.generate()` ruft `_resolve_signature_labels()` mit der Feldliste, den Formulardaten und dem aktuellen Datum auf.
+2. `_resolve_signature_labels()` iteriert über alle Felder und verarbeitet Felder vom Typ `signature`, die ein `signature_label` besitzen.
+3. Für jedes solche Feld wird `_resolve_signature_label()` aufgerufen, das `str.format_map()` mit einem `_FormatMap`-Kontext verwendet.
+4. Das Ergebnis wird als neues Schlüssel-Wert-Paar `signature_label_resolved` in einer **Kopie** des Feld-Dicts gespeichert.
+5. Das PDF-Template greift auf `field.signature_label_resolved` zu und gibt den aufgelösten Text unterhalb des Unterschriftenfeldes aus.
+
+### Fehlerbehandlung
+
+Unbekannte Platzhalter (z.B. `{unbekannt}`) werden durch die Klasse `_FormatMap` (ein `dict`-Subtyp mit überschriebener `__missing__`-Methode) unverändert als `{unbekannt}` zurückgegeben – es wird keine Exception ausgelöst.
+
+### Immutabilität der YAML-Definitionen
+
+Die originalen Feld-Dicts aus den gecachten YAML-Definitionen werden **nicht mutiert**. `_resolve_signature_labels()` erstellt für jedes zu verändernde Feld explizit eine flache Kopie (`dict(field)`), bevor `signature_label_resolved` gesetzt wird.
+
+### Datenfluss (vereinfacht)
+
+```
+YAML-Definition          Formulardaten (POST)
+  signature_label    +   { user: "Max Mustermann", ... }
+        │                          │
+        └──────────┬───────────────┘
+                   ▼
+      _resolve_signature_labels()
+                   │
+                   ▼
+      _resolve_signature_label()   ←   _FormatMap (unbekannte Platzhalter erhalten)
+                   │
+                   ▼
+      field["signature_label_resolved"]
+                   │
+                   ▼
+      PDF-Template rendert Text unterhalb des Unterschriftenfeldes
+```
