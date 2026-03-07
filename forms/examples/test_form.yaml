@@ -26,3 +26,4 @@ fields:
     label: Unterschrift
     required: true
     height: 200px
+    signature_label: "Unterzeichnet von {name} am {date_today}"
