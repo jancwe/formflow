@@ -221,7 +221,7 @@ Das Deployment-Diagramm zeigt die Laufzeitumgebung in Produktion und Entwicklung
 graph TD
     subgraph Host-System
         subgraph Produktions-Stack["docker-compose.yml"]
-            AppProd["formflow-app\nContainer\n:8080→5000"]
+            AppProd["ghcr.io/jancwe/formflow:latest\nformflow-app Container\n:8080→5000"]
         end
 
         subgraph Dev-Stack["docker-compose.dev.yml"]
@@ -255,8 +255,8 @@ graph TD
 
 | Umgebung | Compose-Datei | Besonderheiten |
 |---|---|---|
-| **Produktion** | `docker-compose.yml` | Nur `formflow-app`-Container; SMB über externe Netzwerkfreigabe |
-| **Entwicklung** | `docker-compose.dev.yml` | Zusätzlicher `smb-server`-Container zum Testen des SMB-Uploads |
+| **Produktion** | `docker-compose.yml` | Image wird aus `ghcr.io/jancwe/formflow:latest` gezogen (kein lokaler Build); SMB über externe Netzwerkfreigabe; automatische Updates via `podman auto-update` möglich |
+| **Entwicklung** | `docker-compose.dev.yml` | Lokaler Build via `build: .`; zusätzlicher `smb-server`-Container zum Testen des SMB-Uploads |
 
 Der Anwendungsserver **Gunicorn** wird mit 2 Worker-Prozessen gestartet (`-w 2`), um parallele Anfragen zu bedienen.
 
