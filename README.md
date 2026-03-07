@@ -20,6 +20,24 @@ Die Anwendung generiert aus den eingegebenen Daten automatisch ein an die Corpor
 
 Das Projekt nutzt Docker (bzw. Podman) für ein einfaches Deployment.
 
+### Fertiges Container-Image (empfohlen)
+
+Das offizielle Image wird bei jedem Merge auf `main` automatisch gebaut und in die GitHub Container Registry gepusht.
+
+```bash
+# Image von GitHub Container Registry ziehen
+docker pull ghcr.io/jancwe/formflow:latest
+
+# Container starten
+docker run -d \
+  -p 8080:5000 \
+  --env-file .env \
+  -v ./forms:/app/forms:Z \
+  -v ./pdf_output:/app/pdfs:Z \
+  -v ./drafts:/app/drafts:Z \
+  ghcr.io/jancwe/formflow:latest
+```
+
 ### Produktionsumgebung
 
 Für den normalen Betrieb wird die `docker-compose.yml` verwendet. Diese startet nur die `formflow-app`.
@@ -31,6 +49,8 @@ docker-compose pull && docker-compose up -d
 # Anwendung aufrufen
 # http://localhost:8080
 ```
+
+> **Hinweis:** Alternativ kann in der `docker-compose.yml` `build: .` durch `image: ghcr.io/jancwe/formflow:latest` ersetzt werden, um das fertige Image aus der GitHub Container Registry zu verwenden, anstatt lokal zu bauen.
 
 > **Hinweis:** Der Host-Port kann über die Variable `APP_HOST_PORT` in der `.env`-Datei konfiguriert werden (Standard: `8080`). Beispiel: `APP_HOST_PORT=9090`
 
