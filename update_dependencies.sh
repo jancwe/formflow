@@ -10,12 +10,11 @@ echo "🔍 Prüfe auf Updates für alle Abhängigkeiten (das kann einen Moment d
 LATEST_BOOTSTRAP=$(curl -s "https://registry.npmjs.org/bootstrap/latest" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
 LATEST_SIGPAD=$(curl -s "https://registry.npmjs.org/signature_pad/latest" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-# --- 2. Backend (PyPI) ---
-CUR_FLASK=$(grep -i '^Flask==' requirements.txt | cut -d'=' -f3)
-CUR_WEASYPRINT=$(grep -i '^WeasyPrint==' requirements.txt | cut -d'=' -f3)
-CUR_SMBPROTO=$(grep -i '^smbprotocol==' requirements.txt | cut -d'=' -f3 || true)
-# fpdf2 is no longer used in the project; keep for backwards compatibility check
-CUR_FPDF2=$(grep -i '^fpdf2==' requirements.txt | cut -d'=' -f3 || echo "(nicht installiert)")
+# --- 2. Backend (pyproject.toml) ---
+CUR_FLASK=$(grep -i '"Flask==' pyproject.toml | grep -o '[0-9][^"]*' | head -1)
+CUR_WEASYPRINT=$(grep -i '"WeasyPrint==' pyproject.toml | grep -o '[0-9][^"]*' | head -1)
+CUR_SMBPROTO=$(grep -i '"smbprotocol==' pyproject.toml | grep -o '[0-9][^"]*' | head -1 || true)
+CUR_FPDF2="(nicht installiert)"
 
 LATEST_FLASK=$(curl -s "https://pypi.org/pypi/Flask/json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
 LATEST_WEASYPRINT=$(curl -s "https://pypi.org/pypi/WeasyPrint/json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
@@ -40,7 +39,7 @@ echo "📦 Frontend (Lokale Dateien):"
 echo "  Bootstrap:     $BOOTSTRAP_VER -> $LATEST_BOOTSTRAP"
 echo "  Signature Pad: $SIGPAD_VER -> $LATEST_SIGPAD"
 echo ""
-echo "🐍 Backend (requirements.txt):"
+echo "🐍 Backend (pyproject.toml):"
 echo "  Flask:         $CUR_FLASK -> $LATEST_FLASK"
 echo "  WeasyPrint:    $CUR_WEASYPRINT -> $LATEST_WEASYPRINT"
 if [ -n "$CUR_SMBPROTO" ]; then
@@ -73,20 +72,14 @@ then
     echo "🔄 Aktualisiere Konfigurationsdateien..."
 
     # Sicherungsdateien anlegen, damit wir bei Buildfehlern zurückrollen können
-    cp requirements.txt requirements.txt.bak
+    cp pyproject.toml pyproject.toml.bak
     cp Dockerfile Dockerfile.bak
     tar cfz frontend-backup.tar.gz static/css static/js || true
 
-    # Update requirements.txt
-    sed -i "s/^Flask==.*/Flask==$LATEST_FLASK/" requirements.txt
-    sed -i "s/^WeasyPrint==.*/WeasyPrint==$LATEST_WEASYPRINT/" requirements.txt
-    if grep -q '^smbprotocol==' requirements.txt; then
-        sed -i "s/^smbprotocol==.*/smbprotocol==$LATEST_SMBPROTO/" requirements.txt
-    else
-        echo "smbprotocol==$LATEST_SMBPROTO" >> requirements.txt
-    fi
-    # legacy fpdf2 falls es noch drin steht
-    sed -i "s/^fpdf2==.*/fpdf2==$LATEST_FPDF2/" requirements.txt || true
+    # Update pyproject.toml
+    sed -i "s/\"Flask==[^\"]*\"/\"Flask==$LATEST_FLASK\"/" pyproject.toml
+    sed -i "s/\"WeasyPrint==[^\"]*\"/\"WeasyPrint==$LATEST_WEASYPRINT\"/" pyproject.toml
+    sed -i "s/\"smbprotocol==[^\"]*\"/\"smbprotocol==$LATEST_SMBPROTO\"/" pyproject.toml
 
     # Update Dockerfile
     sed -i "s/^FROM python:.*/FROM python:$LATEST_PYTHON/" Dockerfile
@@ -109,7 +102,7 @@ then
 
     if [ -n "$BUILD_FAILED" ]; then
         echo "❌ Build fehlgeschlagen – rolle Änderungen zurück."
-        mv requirements.txt.bak requirements.txt
+        mv pyproject.toml.bak pyproject.toml
         mv Dockerfile.bak Dockerfile
         [ -f frontend-backup.tar.gz ] && tar xfz frontend-backup.tar.gz
         exit 1
