@@ -29,4 +29,8 @@ where = ["src"]
 include = ["formflow*"]
 
 [tool.setuptools.package-data]
-formflow = ["pdf_templates/*.html"]
+formflow = [
+    "pdf_templates/*.html",
+    "templates/*.html",
+    "static/**/*",
+]
