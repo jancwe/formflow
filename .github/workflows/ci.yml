@@ -66,7 +66,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Start services
-        run: docker compose -f docker-compose.dev.yml up -d --wait --wait-timeout 60
+        run: docker compose -f docker-compose.dev.yml up -d --wait --wait-timeout 60 --no-build
         env:
           FORMFLOW_IMAGE: formflow:ci
 
