@@ -123,7 +123,7 @@ class TestEditFormRoute:
 class TestPreviewMultiSelect:
     def test_preview_stores_multiselect_as_list(self, client, tmp_path, mocker):
         """preview_form should store multi-select values as a list, not a joined string."""
-        mocker.patch("formflow.pdf_generator.PdfGenerator.generate")
+        mocker.patch("formflow.services.pdf_generator.PdfGenerator.generate")
 
         response = client.post(
             "/preview/test_form",
@@ -140,11 +140,11 @@ class TestPreviewMultiSelect:
 
     def test_preview_pdf_is_accessible(self, client, tmp_path, mocker):
         """After POST /preview/<form_id>, the PDF referenced by the preview must be accessible via GET /pdf/temp_<uuid>.pdf."""
-        mocker.patch("formflow.pdf_generator.PdfGenerator.generate")
+        mocker.patch("formflow.services.pdf_generator.PdfGenerator.generate")
 
         # Intercept uuid generation so we know the filename in advance
         fixed_uuid = "deadbeef1234567890abcdef12345678"
-        mocker.patch("formflow.routes.uuid.uuid4", return_value=mocker.Mock(hex=fixed_uuid))
+        mocker.patch("formflow.routes.main.uuid.uuid4", return_value=mocker.Mock(hex=fixed_uuid))
 
         # Pre-create the temp PDF that the (mocked) generator would have written
         pdfs_dir = tmp_path / "pdfs"
