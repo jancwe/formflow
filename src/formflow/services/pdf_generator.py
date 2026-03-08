@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PDF_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pdf_templates')
+_DEFAULT_PDF_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'pdf_templates')
 
 
 class _FormatMap(dict):

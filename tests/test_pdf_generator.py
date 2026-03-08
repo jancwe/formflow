@@ -1,7 +1,7 @@
 """Unit tests for helper classes and methods in formflow.pdf_generator."""
 import pytest
 
-from formflow.pdf_generator import _FormatMap, _resolve_signature_label, PdfGenerator
+from formflow.services.pdf_generator import _FormatMap, _resolve_signature_label, PdfGenerator
 
 
 # ---------------------------------------------------------------------------

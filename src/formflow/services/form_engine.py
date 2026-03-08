@@ -8,7 +8,7 @@ import yaml
 from flask import Flask, current_app
 
 from .pdf_generator import PdfGenerator
-from .routes import register_routes
+from ..routes.main import register_routes
 from .storage import PdfStorage
 
 # Logger konfigurieren
