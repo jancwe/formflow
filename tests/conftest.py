@@ -26,7 +26,7 @@ def app(cwd_tmp, config):
     """Flask test app with formflow config set (no routes registered yet)."""
     flask_app = Flask(
         __name__,
-        template_folder=os.path.join(os.path.dirname(__file__), "..", "formflow", "templates"),
+        template_folder=os.path.join(os.path.dirname(__file__), "..", "src", "formflow", "templates"),
     )
     flask_app.config["TESTING"] = True
     flask_app.config["formflow"] = config
