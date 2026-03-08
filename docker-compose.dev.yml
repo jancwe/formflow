@@ -15,9 +15,9 @@ services:
     restart: unless-stopped
     depends_on:
       smb-server:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:5000/"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/')\""]
       interval: 2s
       timeout: 3s
       retries: 15
@@ -33,3 +33,9 @@ services:
     volumes:
       - ./smb_data:/share:Z
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 445 || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
