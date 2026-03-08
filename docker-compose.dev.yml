@@ -1,6 +1,7 @@
 services:
   formflow-app:
-    build: .
+    # Für lokales Bauen: docker build -t formflow:local .
+    image: ${FORMFLOW_IMAGE:-formflow:local}
     ports:
       - "${APP_HOST_PORT:-8080}:5000"
     env_file:
@@ -13,13 +14,17 @@ services:
       - ./drafts:/app/drafts:Z
     restart: unless-stopped
     depends_on:
-      - smb-server
+      smb-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/')\""]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
 
   smb-server:
     image: dperson/samba
-    # ports:
-    #   - "139:139"
-    #   - "445:445"
     environment:
       - USERID=0
       - GROUPID=0
@@ -28,3 +33,9 @@ services:
     volumes:
       - ./smb_data:/share:Z
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 445 || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
