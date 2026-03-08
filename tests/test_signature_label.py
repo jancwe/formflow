@@ -1,6 +1,6 @@
 """Unit tests for the signature_label interpolation logic in PdfGenerator."""
 import pytest
-from formflow.pdf_generator import _resolve_signature_label, PdfGenerator
+from formflow.services.pdf_generator import _resolve_signature_label, PdfGenerator
 
 
 DATE = "07.03.2026"

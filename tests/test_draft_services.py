@@ -3,7 +3,7 @@ import os
 import pytest
 from werkzeug.datastructures import MultiDict
 
-from formflow.services import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
+from formflow.services.draft_service import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
 
 
 @pytest.fixture
