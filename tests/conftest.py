@@ -5,7 +5,7 @@ import pytest
 from flask import Flask
 
 from formflow.config import AppSettings
-from formflow.form_engine import FormEngine
+from formflow.services.form_engine import FormEngine
 
 
 @pytest.fixture

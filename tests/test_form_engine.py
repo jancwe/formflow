@@ -30,7 +30,7 @@ def test_generate_filename_parts(engine, monkeypatch):
     }
 
     # Mock datetime.now() to have a predictable timestamp
-    import formflow.form_engine as fe_module
+    import formflow.services.form_engine as fe_module
     from datetime import datetime as real_datetime
 
     class FakeDatetime(real_datetime):

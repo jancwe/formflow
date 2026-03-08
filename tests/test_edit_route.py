@@ -1,7 +1,7 @@
 """Integration tests for the edit_form route and multi-select handling in FormEngine."""
 import pytest
 
-from formflow.form_engine import FormEngine
+from formflow.services.form_engine import FormEngine
 
 
 # ---------------------------------------------------------------------------
