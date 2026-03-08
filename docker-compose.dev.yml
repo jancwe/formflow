@@ -1,7 +1,7 @@
 services:
   formflow-app:
+    # Für lokales Bauen: docker build -t formflow:local .
     image: ${FORMFLOW_IMAGE:-formflow:local}
-    build: .
     ports:
       - "${APP_HOST_PORT:-8080}:5000"
     env_file:
