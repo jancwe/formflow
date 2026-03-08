@@ -27,3 +27,6 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["formflow*"]
+
+[tool.setuptools.package-data]
+formflow = ["pdf_templates/*.html"]
