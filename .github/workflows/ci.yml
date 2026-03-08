@@ -36,31 +36,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install ".[dev]"
 
-      - name: Install Docker Compose
-        run: sudo apt-get update && sudo apt-get install -y docker-compose
-
       - name: Create .env file for testing
         run: cp .env.example .env
 
       - name: Setup forms for testing
         run: cp forms/examples/*.yaml forms/
 
-      - name: Start services
-        run: docker-compose -f docker-compose.dev.yml up -d
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Wait for services
-        run: |
-          # Wait for the web server to be ready
-          timeout=60
-          while ! curl -s http://localhost:8080 > /dev/null; do
-            timeout=$((timeout-1))
-            if [ $timeout -eq 0 ]; then
-              echo "Error: Timed out waiting for web server."
-              docker-compose logs
-              exit 1
-            fi
-            sleep 1
-          done
+      - name: Build formflow image with cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: formflow:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start services
+        run: docker compose -f docker-compose.dev.yml up -d --wait --wait-timeout 60
+        env:
+          FORMFLOW_IMAGE: formflow:ci
 
       - name: Run tests
         id: tests
@@ -68,10 +65,10 @@ jobs:
 
       - name: Show logs on failure
         if: failure() && steps.tests.outcome == 'failure'
-        run: docker-compose logs formflow-app
+        run: docker compose -f docker-compose.dev.yml logs formflow-app
 
       - name: Tear down services
         if: always()
         run: |
-          docker-compose -f docker-compose.dev.yml down
+          docker compose -f docker-compose.dev.yml down
           sudo rm -rf smb_data
