@@ -1,0 +1,25 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Umgebungsvariablen (niemals ins Image)
+.env
+.env.*
+!.env.example
+
+# Tests
+tests/
+
+# Laufzeit-Daten
+pdf_output/
+smb_data/
+drafts/
+
+# Dev-Tools
+.git/
+.github/
+*.md

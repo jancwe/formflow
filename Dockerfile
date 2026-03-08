@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libopenjp2-7-dev \
     libffi-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .

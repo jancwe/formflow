@@ -56,7 +56,7 @@ def test_smb_fallback_when_server_offline():
     und der Benutzer eine Warnung mit Download-Link erhält."""
 
     # 1. SMB-Server stoppen
-    subprocess.run(["docker", "stop", "formflow_smb-server_1"], check=False, capture_output=True)
+    subprocess.run(["docker", "compose", "-f", "docker-compose.dev.yml", "stop", "smb-server"], check=False, capture_output=True)
     # Kurz warten bis der Container tatsächlich gestoppt ist
     time.sleep(2)
 
@@ -121,5 +121,5 @@ def test_smb_fallback_when_server_offline():
 
     finally:
         # SMB-Server wieder starten
-        subprocess.run(["docker", "start", "formflow_smb-server_1"], check=False, capture_output=True)
+        subprocess.run(["docker", "compose", "-f", "docker-compose.dev.yml", "start", "smb-server"], check=False, capture_output=True)
         time.sleep(3)
