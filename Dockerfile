@@ -22,6 +22,10 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
+# Statische Dateien (CSS, JS, Standard-Logo) in den festen static-Pfad kopieren,
+# der von Flask als static_folder verwendet wird.
+RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/
+
 EXPOSE 5000
 
 # Verwende Gunicorn als Produktions-WSGI-Server
