@@ -9,7 +9,15 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PDF_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'pdf_templates')
+_CONTAINER_PDF_TEMPLATES_DIR = '/app/pdf_templates'
+_PACKAGE_PDF_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'pdf_templates')
+# Resolved once at import time: /app/pdf_templates is created by the Dockerfile
+# (or provided by a volume mount) before the application starts.
+_DEFAULT_PDF_TEMPLATES_DIR = (
+    _CONTAINER_PDF_TEMPLATES_DIR
+    if os.path.isdir(_CONTAINER_PDF_TEMPLATES_DIR)
+    else _PACKAGE_PDF_TEMPLATES_DIR
+)
 
 
 class _FormatMap(dict):

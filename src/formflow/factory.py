@@ -6,7 +6,7 @@ from .config import AppSettings
 from .services.form_engine import FormEngine
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="/app/static")
     app.config["VERSION"] = __version__
 
     try:

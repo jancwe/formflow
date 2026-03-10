@@ -22,6 +22,11 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
+# Make default static assets and PDF templates available at fixed paths so they
+# work as fallbacks when no volume is mounted (volume mounts override these).
+RUN cp -r src/formflow/static /app/static \
+    && cp -r src/formflow/pdf_templates /app/pdf_templates
+
 EXPOSE 5000
 
 # Verwende Gunicorn als Produktions-WSGI-Server
