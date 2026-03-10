@@ -99,7 +99,7 @@ Eine Vorlage mit allen verfügbaren Variablen liegt in `.env.example`.
 # Firma
 APP_COMPANY__NAME="Musterfirma GmbH"
 APP_COMPANY__ADDRESS="Musterstraße 123 &bull; 12345 Musterstadt"
-APP_COMPANY__LOGO_FILENAME="logo.png"   # Muss im Ordner static/ liegen
+APP_COMPANY__LOGO_FILENAME="logo.png"   # Dateiname des Logos im static/-Ordner neben docker-compose.yml
 
 # Farben
 APP_COLORS__PRIMARY="#0056b3"      # Hauptfarbe (Buttons, Header-Linie)
