@@ -14,7 +14,7 @@
 
 {% block content %}
 <div class="mb-3">
-    <a href="/" class="btn btn-outline-secondary">&larr; Zurück zur Übersicht</a>
+    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('draftForm').requestSubmit()">&larr; Zurück zur Übersicht</button>
 </div>
 <div class="card">
     <div class="card-body">
@@ -24,6 +24,7 @@
         {% endif %}
         
         <form id="dynamicForm" action="/preview/{{ form.form_id }}" method="POST">
+            <input type="hidden" name="draft_id" value="{{ draft_id | default('') }}">
             {% for field in form.fields %}
             <div class="mb-3">
                 <label class="form-label">

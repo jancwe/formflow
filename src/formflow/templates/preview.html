@@ -47,6 +47,7 @@
 
         <div class="d-flex justify-content-between">
             <form action="/edit/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 pe-2">
+                <input type="hidden" name="draft_id" value="{{ draft_id | default('') }}">
                 {% for key, value in form_data.items() %}
                     {% if value is iterable and value is not string %}
                         {% for v in value %}
@@ -60,6 +61,7 @@
             </form>
             
             <form action="/confirm/{{ form_id }}/{{ uuid }}" method="POST" class="w-50 ps-2">
+                <input type="hidden" name="draft_id" value="{{ draft_id | default('') }}">
                 {% for key, value in form_data.items() %}
                     {% if value is iterable and value is not string %}
                         {% for v in value %}
