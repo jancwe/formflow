@@ -1,10 +1,9 @@
 import os
 import subprocess
 import time
-import pytest
+
 import requests
 
-import shutil
 
 # Integrationstest für den SMB-Upload
 def test_smb_upload():
@@ -17,8 +16,8 @@ def test_smb_upload():
             "handover_date": "2026-03-01",
             "condition": "Neuwertig",
             "accessories": "Netzteil",
-            "signature_employee": "Test Signature"
-        }
+            "signature_employee": "Test Signature",
+        },
     )
     assert preview_response.status_code == 200
 
@@ -26,9 +25,9 @@ def test_smb_upload():
     file_id = ""
     for line in preview_response.text.splitlines():
         if "/confirm/notebook_handover/" in line:
-            file_id = line.split("/confirm/notebook_handover/")[1].split("\"")[0]
+            file_id = line.split("/confirm/notebook_handover/")[1].split('"')[0]
             break
-    
+
     assert file_id, "Konnte die file_id nicht aus der Vorschau-Antwort extrahieren."
 
     # 2. Bestätigung senden
@@ -39,8 +38,8 @@ def test_smb_upload():
             "handover_date": "2026-03-01",
             "condition": "Neuwertig",
             "accessories": "Netzteil",
-            "signature_employee": "Test Signature"
-        }
+            "signature_employee": "Test Signature",
+        },
     )
     assert confirm_response.status_code == 200
 
@@ -56,7 +55,11 @@ def test_smb_fallback_when_server_offline():
     und der Benutzer eine Warnung mit Download-Link erhält."""
 
     # 1. SMB-Server stoppen
-    subprocess.run(["docker", "compose", "-f", "docker-compose.dev.yml", "stop", "smb-server"], check=False, capture_output=True)
+    subprocess.run(
+        ["docker", "compose", "-f", "docker-compose.dev.yml", "stop", "smb-server"],
+        check=False,
+        capture_output=True,
+    )
     # Kurz warten bis der Container tatsächlich gestoppt ist
     time.sleep(2)
 
@@ -69,8 +72,8 @@ def test_smb_fallback_when_server_offline():
                 "handover_date": "2026-03-01",
                 "condition": "Neuwertig",
                 "accessories": "Netzteil",
-                "signature_employee": "Test Signature"
-            }
+                "signature_employee": "Test Signature",
+            },
         )
         assert preview_response.status_code == 200
 
@@ -78,7 +81,7 @@ def test_smb_fallback_when_server_offline():
         file_id = ""
         for line in preview_response.text.splitlines():
             if "/confirm/notebook_handover/" in line:
-                file_id = line.split("/confirm/notebook_handover/")[1].split("\"")[0]
+                file_id = line.split("/confirm/notebook_handover/")[1].split('"')[0]
                 break
         assert file_id, "Konnte die file_id nicht aus der Vorschau-Antwort extrahieren."
 
@@ -90,8 +93,8 @@ def test_smb_fallback_when_server_offline():
                 "handover_date": "2026-03-01",
                 "condition": "Neuwertig",
                 "accessories": "Netzteil",
-                "signature_employee": "Test Signature"
-            }
+                "signature_employee": "Test Signature",
+            },
         )
         assert confirm_response.status_code == 200
 
@@ -103,12 +106,16 @@ def test_smb_fallback_when_server_offline():
 
         # 5. Download-Button ist vorhanden
         assert "PDF herunterladen" in html, "Download-Button fehlt."
-        assert 'download' in html, "Download-Attribut fehlt."
+        assert "download" in html, "Download-Attribut fehlt."
 
         # 6. Dateiname aus der Warnung extrahieren und prüfen ob die Datei lokal existiert
         # Der Dateiname steht im HTML nach "gespeichert unter: "
         import re
-        match = re.search(r'gespeichert unter: (\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_notebook_handover_fallback-test[^<\s]*\.pdf)', html)
+
+        match = re.search(
+            r"gespeichert unter: (\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_notebook_handover_fallback-test[^<\s]*\.pdf)",
+            html,
+        )
         assert match, "Dateiname konnte nicht aus der Warnung extrahiert werden."
         local_filename = match.group(1)
 
@@ -121,5 +128,9 @@ def test_smb_fallback_when_server_offline():
 
     finally:
         # SMB-Server wieder starten
-        subprocess.run(["docker", "compose", "-f", "docker-compose.dev.yml", "start", "smb-server"], check=False, capture_output=True)
+        subprocess.run(
+            ["docker", "compose", "-f", "docker-compose.dev.yml", "start", "smb-server"],
+            check=False,
+            capture_output=True,
+        )
         time.sleep(3)

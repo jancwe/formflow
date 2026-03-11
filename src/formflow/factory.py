@@ -5,8 +5,9 @@ from ._version import __version__
 from .config import AppSettings
 from .services.form_engine import FormEngine
 
+
 def create_app():
-    app = Flask(__name__, static_folder='/app/static')
+    app = Flask(__name__, static_folder="/app/static")
     app.config["VERSION"] = __version__
 
     try:
@@ -14,13 +15,8 @@ def create_app():
         settings = AppSettings()
         app.config["formflow"] = settings.model_dump()
     except ValidationError as e:
-        error_details = "\n".join(
-            f"- APP_{'__'.join(str(loc) for loc in err['loc']).upper()}: {err['msg']}"
-            for err in e.errors()
-        )
-        raise RuntimeError(
-            f"Konfigurationsfehler – folgende Umgebungsvariablen fehlen oder sind ungültig:\n{error_details}"
-        ) from e
+        error_details = "\n".join(f"- APP_{'__'.join(str(loc) for loc in err['loc']).upper()}: {err['msg']}" for err in e.errors())
+        raise RuntimeError(f"Konfigurationsfehler – folgende Umgebungsvariablen fehlen oder sind ungültig:\n{error_details}") from e
 
     # Formular-Engine initialisieren und Konfiguration übergeben
     form_engine = FormEngine()

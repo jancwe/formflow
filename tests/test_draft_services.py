@@ -1,10 +1,18 @@
 import json
 import os
 import time
+
 import pytest
 from werkzeug.datastructures import MultiDict
 
-from formflow.services.draft_service import collect_form_data, save_draft, load_draft, list_drafts, delete_draft, update_draft
+from formflow.services.draft_service import (
+    collect_form_data,
+    delete_draft,
+    list_drafts,
+    load_draft,
+    save_draft,
+    update_draft,
+)
 
 
 @pytest.fixture
@@ -18,6 +26,7 @@ def drafts_dir(tmp_path):
 # ---------------------------------------------------------------------------
 # save_draft
 # ---------------------------------------------------------------------------
+
 
 def test_save_draft_creates_file(drafts_dir):
     """save_draft creates a JSON file in drafts_dir and returns a draft_id."""
@@ -58,6 +67,7 @@ def test_save_draft_unique_ids(drafts_dir):
 # load_draft
 # ---------------------------------------------------------------------------
 
+
 def test_load_draft_returns_correct_data(drafts_dir):
     """load_draft returns the same data that was saved."""
     form_data = {"employee": "Erika", "date": "2026-03-01"}
@@ -89,6 +99,7 @@ def test_load_draft_raises_for_corrupt_file(drafts_dir):
 # ---------------------------------------------------------------------------
 # list_drafts
 # ---------------------------------------------------------------------------
+
 
 def test_list_drafts_returns_empty_for_missing_dir(tmp_path):
     """list_drafts returns an empty list when the directory does not exist."""
@@ -137,7 +148,11 @@ def test_list_drafts_draft_subtitle_from_in_draft_title_fields(drafts_dir):
             ],
         }
     }
-    save_draft(drafts_dir, "handover", {"user": "Max Mustermann", "notebook": "ThinkPad", "service_tag": "ABC123"})
+    save_draft(
+        drafts_dir,
+        "handover",
+        {"user": "Max Mustermann", "notebook": "ThinkPad", "service_tag": "ABC123"},
+    )
 
     drafts = list_drafts(drafts_dir, forms)
 
@@ -217,6 +232,7 @@ def test_list_drafts_ignores_unrelated_files(drafts_dir):
 # delete_draft
 # ---------------------------------------------------------------------------
 
+
 def test_delete_draft_removes_file(drafts_dir):
     """delete_draft removes the corresponding JSON file."""
     draft_id = save_draft(drafts_dir, "form_x", {"k": "v"})
@@ -236,6 +252,7 @@ def test_delete_draft_is_idempotent(drafts_dir):
 # ---------------------------------------------------------------------------
 # collect_form_data
 # ---------------------------------------------------------------------------
+
 
 def test_collect_form_data_multiselect_stored_as_list():
     """collect_form_data stores multi-select values as a list, not a joined string."""
@@ -302,6 +319,7 @@ def test_list_drafts_draft_subtitle_with_list_value(drafts_dir):
 # ---------------------------------------------------------------------------
 # update_draft
 # ---------------------------------------------------------------------------
+
 
 def test_update_draft_overwrites_file(drafts_dir):
     """update_draft overwrites an existing draft file with new data."""

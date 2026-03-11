@@ -1,12 +1,13 @@
 """Unit tests for helper classes and methods in formflow.pdf_generator."""
+
 import pytest
 
-from formflow.services.pdf_generator import _FormatMap, _resolve_signature_label, PdfGenerator
-
+from formflow.services.pdf_generator import PdfGenerator, _FormatMap, _resolve_signature_label
 
 # ---------------------------------------------------------------------------
 # Fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def pdf_generator():
@@ -17,6 +18,7 @@ def pdf_generator():
 # ---------------------------------------------------------------------------
 # TestFormatMap
 # ---------------------------------------------------------------------------
+
 
 class TestFormatMap:
     def test_known_key_returns_value(self):
@@ -45,6 +47,7 @@ class TestFormatMap:
 # TestResolveSignatureLabel
 # ---------------------------------------------------------------------------
 
+
 class TestResolveSignatureLabel:
     def test_interpolates_form_field(self):
         """A {fieldname} placeholder is replaced by the matching value from form_data."""
@@ -58,9 +61,7 @@ class TestResolveSignatureLabel:
 
     def test_interpolates_mixed_placeholders(self):
         """Both a form_data placeholder and {date_today} are replaced correctly."""
-        result = _resolve_signature_label(
-            "Von {user} am {date_today}", {"user": "Erika"}, "01.01.2026"
-        )
+        result = _resolve_signature_label("Von {user} am {date_today}", {"user": "Erika"}, "01.01.2026")
         assert result == "Von Erika am 01.01.2026"
 
     def test_unknown_placeholder_stays_intact(self):
@@ -97,6 +98,7 @@ class TestResolveSignatureLabel:
 # ---------------------------------------------------------------------------
 # TestResolveSIgnatureLabels
 # ---------------------------------------------------------------------------
+
 
 class TestResolveSIgnatureLabels:
     def test_non_signature_fields_unchanged(self, pdf_generator):
@@ -135,7 +137,12 @@ class TestResolveSIgnatureLabels:
         """Multiple signature fields each receive their own resolved label."""
         fields = [
             {"type": "signature", "name": "sig1", "label": "U1", "signature_label": "Von {user}"},
-            {"type": "signature", "name": "sig2", "label": "U2", "signature_label": "Datum: {date_today}"},
+            {
+                "type": "signature",
+                "name": "sig2",
+                "label": "U2",
+                "signature_label": "Datum: {date_today}",
+            },
         ]
         result = pdf_generator._resolve_signature_labels(fields, {"user": "Max"}, "07.03.2026")
         assert result[0]["signature_label_resolved"] == "Von Max"

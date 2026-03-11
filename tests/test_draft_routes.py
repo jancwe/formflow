@@ -1,10 +1,10 @@
 """Integration tests for the draft routes in FormEngine."""
+
 import json
+
 import pytest
 
-from formflow.services.form_engine import FormEngine
 from formflow.services.draft_service import save_draft
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -15,7 +15,14 @@ SIMPLE_FORM = {
     "title": "Testformular",
     "submit_button": "Vorschau anzeigen",
     "fields": [
-        {"type": "text", "name": "name", "label": "Name", "required": False, "placeholder": "", "in_draft_title": True},
+        {
+            "type": "text",
+            "name": "name",
+            "label": "Name",
+            "required": False,
+            "placeholder": "",
+            "in_draft_title": True,
+        },
         {"type": "date", "name": "date", "label": "Datum", "required": False},
         {
             "type": "signature",
@@ -63,6 +70,7 @@ def drafts_dir(tmp_path):
 # POST /draft/<form_id>  – save draft
 # ---------------------------------------------------------------------------
 
+
 class TestSaveDraftRoute:
     def test_save_draft_redirects_to_forms(self, client):
         """POST /draft/<form_id> should redirect to /forms on success."""
@@ -105,6 +113,7 @@ class TestSaveDraftRoute:
 # ---------------------------------------------------------------------------
 # GET /draft/<form_id>/<draft_id>/load  – load draft
 # ---------------------------------------------------------------------------
+
 
 class TestLoadDraftRoute:
     def _create_draft(self, tmp_path, form_data=None):
@@ -177,9 +186,11 @@ class TestLoadDraftRoute:
         assert 'value="Maus"' in html
         assert 'value="Tasche"' in html
 
+
 # ---------------------------------------------------------------------------
 # POST /draft/<draft_id>/delete  – delete draft
 # ---------------------------------------------------------------------------
+
 
 class TestDeleteDraftRoute:
     def test_delete_draft_redirects_to_forms(self, client, tmp_path):
@@ -213,6 +224,7 @@ class TestDeleteDraftRoute:
 # ---------------------------------------------------------------------------
 # GET /forms  – list forms with drafts
 # ---------------------------------------------------------------------------
+
 
 class TestListFormsWithDrafts:
     def test_list_forms_shows_draft_section(self, client, tmp_path):
@@ -292,6 +304,7 @@ class TestListFormsWithDrafts:
 # POST /preview/<form_id>  – auto-save draft
 # ---------------------------------------------------------------------------
 
+
 class TestPreviewAutosaveDraft:
     def test_preview_creates_draft_when_no_draft_id(self, client, tmp_path, mocker):
         """POST /preview/<form_id> without draft_id should create a new draft file."""
@@ -342,6 +355,7 @@ class TestPreviewAutosaveDraft:
 # ---------------------------------------------------------------------------
 # POST /confirm/<form_id>/<file_id>  – deletes draft on success
 # ---------------------------------------------------------------------------
+
 
 class TestConfirmDeletesDraft:
     def test_confirm_deletes_draft_on_success(self, client, tmp_path, mocker):

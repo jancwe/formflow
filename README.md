@@ -89,6 +89,47 @@ docker-compose -f docker-compose.dev.yml down
 
 ---
 
+## Entwicklungs-Setup (lokal)
+
+Für die lokale Entwicklung ohne Docker (z.B. für Tests und Linting) wird eine virtuelle Python-Umgebung empfohlen.
+
+### Schnellstart
+
+```bash
+# Einmalig nach dem Clonen ausführen:
+bash setup_dev.sh
+```
+
+Das Skript erledigt automatisch:
+1. Erstellt eine virtuelle Umgebung (`.venv/`)
+2. Installiert alle Abhängigkeiten aus `requirements.txt` und `requirements-dev.txt`
+3. Registriert die pre-commit-Hooks (laufen fortan automatisch vor jedem `git commit`)
+4. Legt eine `.env`-Datei aus `.env.example` an (falls noch nicht vorhanden)
+
+### Manuelle Einrichtung
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+pre-commit install
+```
+
+### Linting & Formatierung manuell ausführen
+
+```bash
+# Linting prüfen
+.venv/bin/ruff check .
+
+# Code automatisch formatieren
+.venv/bin/ruff format .
+
+# Alle pre-commit-Hooks manuell auf alle Dateien anwenden
+.venv/bin/pre-commit run --all-files
+```
+
+---
+
 ## Konfiguration (Umgebungsvariablen / `.env`)
 
 Die gesamte Konfiguration erfolgt über **Umgebungsvariablen** (optional aus einer `.env`-Datei im Projektverzeichnis, die von `docker-compose` automatisch geladen wird). [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) validiert und typisiert die Werte beim Start.
