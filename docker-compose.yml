@@ -11,7 +11,9 @@ services:
       - ./pdf_output:/app/pdfs:Z
       - ./forms:/app/forms:Z
       - ./pdf_templates:/app/pdf_templates:Z
-      - ./static:/app/static:Z
+      # Logo anpassen: eigene Logo-Datei als einzelnes File-Mount einbinden
+      # (die Datei muss auf dem Host existieren, bevor docker-compose gestartet wird):
+      # - ./logo.png:/app/static/logo.png:Z
       - ./drafts:/app/drafts:Z
     # Resource limits prevent a runaway process (e.g. concurrent WeasyPrint
     # PDF renderings) from consuming all available host resources.
