@@ -234,7 +234,7 @@ graph TD
             V1["./pdf_output → /app/pdfs"]
             V2["./forms → /app/forms"]
             V3["./pdf_templates → /app/pdf_templates"]
-            V4["./static → /app/static"]
+            V4["./logo.png → /app/static/logo.png"]
             V5["./drafts → /app/drafts"]
         end
     end
@@ -322,7 +322,7 @@ graph TD
 |---|---|---|
 | `APP_COMPANY__NAME` | String | Firmenname (erscheint in Web-UI und PDFs) |
 | `APP_COMPANY__ADDRESS` | String | Firmenadresse (Footer) |
-| `APP_COMPANY__LOGO_FILENAME` | String | Logo-Dateiname (muss in `static/` liegen) |
+| `APP_COMPANY__LOGO_FILENAME` | String | Logo-Dateiname innerhalb von `/app/static/` (muss mit dem Ziel-Pfad im Volume-Mount übereinstimmen) |
 | `APP_COLORS__PRIMARY` | String | Primärfarbe als Hex-Code (z. B. `#0056b3`) |
 | `APP_COLORS__TEXT_DARK` | String | Textfarbe dunkel |
 | `APP_COLORS__TEXT_LIGHT` | String | Textfarbe hell |

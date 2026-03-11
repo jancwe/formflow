@@ -11,7 +11,7 @@ services:
       - ./pdf_output:/app/pdfs:Z
       - ./forms:/app/forms:Z
       - ./pdf_templates:/app/pdf_templates:Z
-      - ./static:/app/static:Z
+      - ./logo.png:/app/static/logo.png:Z
       - ./drafts:/app/drafts:Z
     # Resource limits prevent a runaway process (e.g. concurrent WeasyPrint
     # PDF renderings) from consuming all available host resources.
