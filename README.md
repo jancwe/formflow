@@ -36,6 +36,9 @@ docker run -d \
   -v ./pdf_output:/app/pdfs:Z \
   -v ./drafts:/app/drafts:Z \
   ghcr.io/jancwe/formflow:latest
+
+# Optional: Eigenes Logo einbinden (Datei muss auf dem Host existieren)
+# docker run -d ... -v ./mein-logo.png:/app/static/logo.png:Z ...
 ```
 
 ### Produktionsumgebung
@@ -99,7 +102,7 @@ Eine Vorlage mit allen verfügbaren Variablen liegt in `.env.example`.
 # Firma
 APP_COMPANY__NAME="Musterfirma GmbH"
 APP_COMPANY__ADDRESS="Musterstraße 123 &bull; 12345 Musterstadt"
-APP_COMPANY__LOGO_FILENAME="logo.png"   # Dateiname des Logos im static/-Ordner neben docker-compose.yml
+APP_COMPANY__LOGO_FILENAME="logo.png"   # Dateiname unter dem das Logo in /app/static/ erreichbar ist
 
 # Farben
 APP_COLORS__PRIMARY="#0056b3"      # Hauptfarbe (Buttons, Header-Linie)
@@ -119,6 +122,34 @@ APP_COLORS__BG_GRAY="#f8f8f8"      # Grauer Hintergrund
 > APP_SMB__USERNAME=meinnutzer
 > APP_SMB__PASSWORD=meinpasswort
 > ```
+
+---
+
+### Logo anpassen
+
+Das Container-Image enthält ein Standard-Logo. Um ein eigenes Firmenlogo zu verwenden, gibt es zwei Wege:
+
+**Variante 1 – Docker Compose / `docker run` (Volume-Mount):**
+
+Legen Sie Ihre Logo-Datei (z. B. `logo.png`) neben die `docker-compose.yml` und entkommentieren Sie den vorbereiteten Volume-Mount:
+
+```yaml
+# In docker-compose.yml:
+- ./logo.png:/app/static/logo.png:Z
+```
+
+> **Wichtig:** Die Datei muss auf dem Host existieren, **bevor** `docker-compose up` ausgeführt wird. Andernfalls erstellt Docker ein leeres Verzeichnis statt eines File-Mounts.
+
+**Variante 2 – PaaS-Plattformen ohne Volume-Support (Railway, Render, Fly.io):**
+
+Erstellen Sie ein eigenes `Dockerfile`, das auf dem offiziellen Image basiert:
+
+```dockerfile
+FROM ghcr.io/jancwe/formflow:latest
+COPY logo.png /app/static/logo.png
+```
+
+In beiden Fällen muss `APP_COMPANY__LOGO_FILENAME` auf den Dateinamen im Container verweisen (Standard: `logo.png`).
 
 ---
 
