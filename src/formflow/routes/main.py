@@ -7,7 +7,7 @@ from datetime import date
 from flask import Blueprint, Flask, redirect, render_template, request, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 
-from ..services.draft_service import collect_form_data, delete_draft, list_drafts, load_draft, save_draft
+from ..services.draft_service import collect_form_data, delete_draft, list_drafts, load_draft, save_draft, update_draft
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,13 @@ def register_routes(app: Flask, engine) -> None:
             else:
                 form_data[field_name] = request.form.get(field_name, '')
 
+        # Entwurf automatisch speichern/aktualisieren
+        draft_id = request.form.get('draft_id', '')
+        if draft_id:
+            update_draft('drafts', draft_id, form_id, form_data)
+        else:
+            draft_id = save_draft('drafts', form_id, form_data)
+
         # PDF generieren
         file_id = uuid.uuid4().hex
         temp_filename = f"pdfs/temp_{file_id}.pdf"
@@ -86,6 +93,7 @@ def register_routes(app: Flask, engine) -> None:
         return render_template('preview.html',
                                uuid=file_id,
                                form_id=form_id,
+                               draft_id=draft_id,
                                form_data=form_data,
                                app_config=engine.config)
 
@@ -107,6 +115,9 @@ def register_routes(app: Flask, engine) -> None:
 
         try:
             result = engine._store_pdf(temp_filename, final_filename, filename_parts)
+            draft_id = request.form.get('draft_id', '')
+            if draft_id:
+                delete_draft('drafts', draft_id)
             return render_template('success.html',
                                    app_config=engine.config,
                                    warning=result.get('warning'),
@@ -135,6 +146,7 @@ def register_routes(app: Flask, engine) -> None:
         return render_template('dynamic_form.html',
                                form=form_def,
                                data=request.form,
+                               draft_id=request.form.get('draft_id', ''),
                                date_today=date.today().isoformat(),
                                app_config=engine.config)
 
@@ -146,7 +158,11 @@ def register_routes(app: Flask, engine) -> None:
 
         form_def = engine.forms[form_id]
         form_data = collect_form_data(form_def, request.form)
-        save_draft('drafts', form_id, form_data)
+        draft_id = request.form.get('draft_id', '')
+        if draft_id:
+            update_draft('drafts', draft_id, form_id, form_data)
+        else:
+            save_draft('drafts', form_id, form_data)
         return redirect(url_for('main.list_forms'))
 
     @bp.route('/draft/<form_id>/<draft_id>/load', methods=['GET'])
@@ -157,8 +173,6 @@ def register_routes(app: Flask, engine) -> None:
         except (FileNotFoundError, json.JSONDecodeError):
             logger.warning(f"Entwurf {draft_id} konnte nicht geladen werden.")
             return redirect(url_for('main.list_forms'))
-
-        delete_draft('drafts', draft_id)
 
         if form_id not in engine.forms:
             return "Formular nicht gefunden", 404
@@ -173,6 +187,7 @@ def register_routes(app: Flask, engine) -> None:
         return render_template('dynamic_form.html',
                                form=form_def,
                                data=data,
+                               draft_id=draft_id,
                                date_today=date.today().isoformat(),
                                app_config=engine.config)
 

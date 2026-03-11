@@ -1,9 +1,10 @@
 import json
 import os
+import time
 import pytest
 from werkzeug.datastructures import MultiDict
 
-from formflow.services.draft_service import collect_form_data, save_draft, load_draft, list_drafts, delete_draft
+from formflow.services.draft_service import collect_form_data, save_draft, load_draft, list_drafts, delete_draft, update_draft
 
 
 @pytest.fixture
@@ -296,3 +297,57 @@ def test_list_drafts_draft_subtitle_with_list_value(drafts_dir):
     drafts = list_drafts(drafts_dir, forms)
 
     assert drafts[0]["draft_subtitle"] == "Max, Netzteil, Maus"
+
+
+# ---------------------------------------------------------------------------
+# update_draft
+# ---------------------------------------------------------------------------
+
+def test_update_draft_overwrites_file(drafts_dir):
+    """update_draft overwrites an existing draft file with new data."""
+    draft_id = save_draft(drafts_dir, "my_form", {"field": "original"})
+
+    update_draft(drafts_dir, draft_id, "my_form", {"field": "updated"})
+
+    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert data["form_data"]["field"] == "updated"
+    assert data["draft_id"] == draft_id
+    assert data["form_id"] == "my_form"
+
+
+def test_update_draft_returns_draft_id(drafts_dir):
+    """update_draft returns the same draft_id that was passed."""
+    draft_id = save_draft(drafts_dir, "my_form", {"x": "y"})
+    returned_id = update_draft(drafts_dir, draft_id, "my_form", {"x": "z"})
+    assert returned_id == draft_id
+
+
+def test_update_draft_updates_saved_at(drafts_dir):
+    """update_draft sets a new saved_at timestamp."""
+    draft_id = save_draft(drafts_dir, "my_form", {"x": "y"})
+    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
+    with open(path, encoding="utf-8") as f:
+        original_saved_at = json.load(f)["saved_at"]
+
+    time.sleep(0.01)  # ensure timestamp changes
+
+    update_draft(drafts_dir, draft_id, "my_form", {"x": "updated"})
+    with open(path, encoding="utf-8") as f:
+        updated_saved_at = json.load(f)["saved_at"]
+
+    assert updated_saved_at >= original_saved_at
+
+
+def test_update_draft_creates_file_if_not_exists(drafts_dir):
+    """update_draft creates a new file if the draft_id does not yet exist."""
+    update_draft(drafts_dir, "brand_new_id", "my_form", {"key": "value"})
+
+    path = os.path.join(drafts_dir, "draft_brand_new_id.json")
+    assert os.path.isfile(path)
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["draft_id"] == "brand_new_id"
+    assert data["form_data"]["key"] == "value"

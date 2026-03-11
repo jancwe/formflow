@@ -26,8 +26,13 @@ def collect_form_data(form_def: Dict[str, Any], request_form: MultiDict) -> Dict
 
 
 def save_draft(drafts_dir: str, form_id: str, form_data: dict) -> str:
-    """Speichert einen Entwurf als JSON und gibt die draft_id zurück."""
+    """Speichert einen neuen Entwurf als JSON und gibt die draft_id zurück."""
     draft_id = uuid.uuid4().hex
+    return update_draft(drafts_dir, draft_id, form_id, form_data)
+
+
+def update_draft(drafts_dir: str, draft_id: str, form_id: str, form_data: dict) -> str:
+    """Aktualisiert einen bestehenden Entwurf. Gibt die draft_id zurück."""
     draft = {
         "draft_id": draft_id,
         "form_id": form_id,
@@ -83,6 +88,20 @@ def list_drafts(drafts_dir: str, forms: dict) -> list:
             logger.warning(f"Entwurf konnte nicht geladen werden ({filename}): {e}")
     drafts.sort(key=lambda d: d.get('saved_at', ''), reverse=True)
     return drafts
+
+
+def update_draft(drafts_dir: str, draft_id: str, form_id: str, form_data: dict) -> str:
+    """Aktualisiert einen bestehenden Entwurf. Gibt die draft_id zurück."""
+    draft = {
+        "draft_id": draft_id,
+        "form_id": form_id,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "form_data": form_data,
+    }
+    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(draft, f, ensure_ascii=False)
+    return draft_id
 
 
 def delete_draft(drafts_dir: str, draft_id: str) -> None:

@@ -128,13 +128,13 @@ class TestLoadDraftRoute:
         html = response.get_data(as_text=True)
         assert "VorausgefülltUser" in html
 
-    def test_load_draft_deletes_file_after_load(self, client, tmp_path):
-        """The draft file should be removed after it is loaded."""
+    def test_load_draft_preserves_file(self, client, tmp_path):
+        """The draft file should NOT be removed after it is loaded (persists for re-saves)."""
         draft_id = self._create_draft(tmp_path)
         client.get(f"/draft/test_form/{draft_id}/load")
 
         draft_path = tmp_path / "drafts" / f"draft_{draft_id}.json"
-        assert not draft_path.exists()
+        assert draft_path.exists()
 
     def test_load_draft_redirects_for_missing_draft(self, client):
         """Loading a non-existent draft should redirect gracefully to /forms."""
@@ -152,6 +152,14 @@ class TestLoadDraftRoute:
 
         response = client.get(f"/draft/no_such_form/{draft_id}/load")
         assert response.status_code == 404
+
+    def test_load_draft_includes_draft_id_in_form(self, client, tmp_path):
+        """The rendered form should contain the draft_id as a hidden field."""
+        draft_id = self._create_draft(tmp_path)
+        response = client.get(f"/draft/test_form/{draft_id}/load")
+
+        html = response.get_data(as_text=True)
+        assert draft_id in html
 
     def test_load_draft_restores_multiselect_checkboxes(self, client, tmp_path):
         """Loading a draft should restore multi-select checkboxes that were saved."""
@@ -278,3 +286,100 @@ class TestListFormsWithDrafts:
 
         # The subtitle span should not be rendered (empty string is falsy in Jinja2)
         assert "fw-semibold" not in html
+
+
+# ---------------------------------------------------------------------------
+# POST /preview/<form_id>  – auto-save draft
+# ---------------------------------------------------------------------------
+
+class TestPreviewAutosaveDraft:
+    def test_preview_creates_draft_when_no_draft_id(self, client, tmp_path, mocker):
+        """POST /preview/<form_id> without draft_id should create a new draft file."""
+        mocker.patch("formflow.services.pdf_generator.PdfGenerator.generate")
+
+        client.post("/preview/test_form", data={"name": "AutoSave", "date": "2026-06-01"})
+
+        draft_files = list((tmp_path / "drafts").glob("draft_*.json"))
+        assert len(draft_files) == 1
+        with open(draft_files[0], encoding="utf-8") as f:
+            draft = json.load(f)
+        assert draft["form_data"]["name"] == "AutoSave"
+
+    def test_preview_updates_draft_when_draft_id_given(self, client, tmp_path, mocker):
+        """POST /preview/<form_id> with draft_id should update the existing draft."""
+        mocker.patch("formflow.services.pdf_generator.PdfGenerator.generate")
+
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "test_form", {"name": "OldName", "date": "2026-01-01"})
+
+        client.post(
+            "/preview/test_form",
+            data={"name": "NewName", "date": "2026-06-01", "draft_id": draft_id},
+        )
+
+        # Still exactly one draft file (updated, not duplicated)
+        draft_files = list((tmp_path / "drafts").glob("draft_*.json"))
+        assert len(draft_files) == 1
+        with open(draft_files[0], encoding="utf-8") as f:
+            draft = json.load(f)
+        assert draft["form_data"]["name"] == "NewName"
+        assert draft["draft_id"] == draft_id
+
+    def test_preview_includes_draft_id_in_response(self, client, tmp_path, mocker):
+        """POST /preview/<form_id> should include the draft_id in the response HTML."""
+        mocker.patch("formflow.services.pdf_generator.PdfGenerator.generate")
+
+        response = client.post("/preview/test_form", data={"name": "Test"})
+        html = response.get_data(as_text=True)
+
+        draft_files = list((tmp_path / "drafts").glob("draft_*.json"))
+        assert len(draft_files) == 1
+        with open(draft_files[0], encoding="utf-8") as f:
+            draft = json.load(f)
+        assert draft["draft_id"] in html
+
+
+# ---------------------------------------------------------------------------
+# POST /confirm/<form_id>/<file_id>  – deletes draft on success
+# ---------------------------------------------------------------------------
+
+class TestConfirmDeletesDraft:
+    def test_confirm_deletes_draft_on_success(self, client, tmp_path, mocker):
+        """POST /confirm/<form_id>/<file_id> should delete the draft after successful PDF save."""
+        mocker.patch(
+            "formflow.services.form_engine.FormEngine._store_pdf",
+            return_value={"filename": "test.pdf"},
+        )
+
+        pdfs_dir = tmp_path / "pdfs"
+        pdfs_dir.mkdir(exist_ok=True)
+        (pdfs_dir / "temp_abc123.pdf").write_bytes(b"%PDF-1.4")
+
+        drafts_dir = str(tmp_path / "drafts")
+        draft_id = save_draft(drafts_dir, "test_form", {"name": "WillBeDeleted"})
+        draft_path = tmp_path / "drafts" / f"draft_{draft_id}.json"
+        assert draft_path.exists()
+
+        client.post(
+            "/confirm/test_form/abc123",
+            data={"name": "WillBeDeleted", "draft_id": draft_id},
+        )
+
+        assert not draft_path.exists()
+
+    def test_confirm_without_draft_id_does_not_crash(self, client, tmp_path, mocker):
+        """POST /confirm/<form_id>/<file_id> without draft_id should succeed without error."""
+        mocker.patch(
+            "formflow.services.form_engine.FormEngine._store_pdf",
+            return_value={"filename": "test.pdf"},
+        )
+
+        pdfs_dir = tmp_path / "pdfs"
+        pdfs_dir.mkdir(exist_ok=True)
+        (pdfs_dir / "temp_abc123.pdf").write_bytes(b"%PDF-1.4")
+
+        response = client.post(
+            "/confirm/test_form/abc123",
+            data={"name": "NoDraft"},
+        )
+        assert response.status_code == 200
