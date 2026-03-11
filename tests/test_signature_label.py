@@ -1,7 +1,6 @@
 """Unit tests for the signature_label interpolation logic in PdfGenerator."""
-import pytest
-from formflow.services.pdf_generator import _resolve_signature_label, PdfGenerator
 
+from formflow.services.pdf_generator import PdfGenerator, _resolve_signature_label
 
 DATE = "07.03.2026"
 
@@ -43,7 +42,14 @@ def test_no_signature_label_no_resolved_key():
 def test_signature_label_resolved_set():
     """If a signature field has a signature_label, signature_label_resolved is set correctly."""
     generator = PdfGenerator.__new__(PdfGenerator)
-    fields = [{"type": "signature", "name": "sig", "label": "Unterschrift", "signature_label": "Von {user}"}]
+    fields = [
+        {
+            "type": "signature",
+            "name": "sig",
+            "label": "Unterschrift",
+            "signature_label": "Von {user}",
+        }
+    ]
     resolved = generator._resolve_signature_labels(fields, {"user": "Anna"}, DATE)
     assert resolved[0]["signature_label_resolved"] == "Von Anna"
 

@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 import time
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class PdfStorage:
         # SMB session is registered lazily on first use and reused for subsequent uploads.
         self._smb_session_registered: bool = False
 
-    def store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str], config: Dict[str, Any]) -> dict:
+    def store_pdf(self, temp_path: str, local_final: str, filename_parts: list[str], config: dict[str, Any]) -> dict:
         """Speichert ein PDF entweder lokal oder auf dem SMB-Share.
 
         Wenn SMB deaktiviert ist, wird einfach umbenannt.
@@ -24,8 +24,8 @@ class PdfStorage:
         Returns:
             dict mit 'stored_via' ('smb' oder 'local') und optional 'warning'.
         """
-        smb_config = config.get('smb', {})
-        if not smb_config.get('enabled'):
+        smb_config = config.get("smb", {})
+        if not smb_config.get("enabled"):
             logger.info("SMB ist deaktiviert. Speichere PDF lokal.")
             os.rename(temp_path, local_final)
             return {"stored_via": "local", "filename": os.path.basename(local_final)}
@@ -35,11 +35,11 @@ class PdfStorage:
 
         logger.info("SMB ist aktiviert. Versuche Upload.")
 
-        server = smb_config.get('server')
-        share = smb_config.get('share')
-        folder = smb_config.get('folder', '')
-        username = smb_config.get('username')
-        password = smb_config.get('password')
+        server = smb_config.get("server")
+        share = smb_config.get("share")
+        folder = smb_config.get("folder", "")
+        username = smb_config.get("username")
+        password = smb_config.get("password")
 
         if not (server and share and username and password):
             raise RuntimeError("SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen.")
@@ -51,11 +51,11 @@ class PdfStorage:
                 self._smb_session_registered = True
 
             folder_part = f"\\{folder}" if folder else ""
-            remote_path = fr"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
+            remote_path = rf"\\{server}\{share}{folder_part}\{'_'.join(filename_parts)}.pdf"
 
             try:
-                with open(temp_path, 'rb') as local_file:
-                    with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                with open(temp_path, "rb") as local_file:
+                    with smbclient.open_file(remote_path, mode="wb") as remote_file:
                         shutil.copyfileobj(local_file, remote_file, length=65536)
             except Exception:
                 # Session may have expired or been disconnected; attempt to re-register once.
@@ -63,8 +63,8 @@ class PdfStorage:
                 self._smb_session_registered = False
                 smbclient.register_session(server, username=username, password=password)
                 self._smb_session_registered = True
-                with open(temp_path, 'rb') as local_file:
-                    with smbclient.open_file(remote_path, mode='wb') as remote_file:
+                with open(temp_path, "rb") as local_file:
+                    with smbclient.open_file(remote_path, mode="wb") as remote_file:
                         shutil.copyfileobj(local_file, remote_file, length=65536)
 
             logger.info(f"PDF erfolgreich auf SMB-Share gespeichert: {remote_path}")
@@ -77,7 +77,7 @@ class PdfStorage:
             return {
                 "stored_via": "local",
                 "filename": local_name,
-                "warning": f"Der SMB-Server konnte nicht erreicht werden. Die Datei wurde lokal gespeichert unter: {local_name}"
+                "warning": f"Der SMB-Server konnte nicht erreicht werden. Die Datei wurde lokal gespeichert unter: {local_name}",
             }
 
     def cleanup_temp_files(self, max_age_seconds: int = 3600) -> None:

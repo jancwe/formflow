@@ -20,20 +20,26 @@ else
     echo "   .venv bereits vorhanden, überspringe Erstellung."
 fi
 
-# --- 3. Abhängigkeiten installieren ---
-echo "📥 Installiere Abhängigkeiten..."
-.venv/bin/pip install --upgrade pip --quiet
-.venv/bin/pip install -r requirements.txt --quiet
-.venv/bin/pip install -r requirements-dev.txt --quiet
+# --- 3. Pip upgraden ---
+echo "📥 Upgrade pip, setuptools und wheel..."
+.venv/bin/python3 -m pip install --upgrade pip setuptools wheel
 
-# --- 4. pre-commit-Hooks registrieren ---
+# --- 4. Abhängigkeiten installieren ---
+echo "📥 Installiere Abhängigkeiten aus pyproject.toml..."
+.venv/bin/pip install -e ".[dev]"
+
+# --- 5. pre-commit-Hooks registrieren ---
 echo "🔗 Registriere pre-commit-Hooks..."
 .venv/bin/pre-commit install
 
-# --- 5. .env-Datei anlegen ---
+# --- 6. .env-Datei anlegen ---
 if [ ! -f ".env" ]; then
     echo "📄 Erstelle .env aus .env.example..."
-    cp .env.example .env
+    if [ -f ".env.example" ]; then
+        cp .env.example .env
+    else
+        echo "   ⚠️  .env.example nicht gefunden, überspringe .env-Erstellung."
+    fi
 else
     echo "   .env bereits vorhanden, überspringe Erstellung."
 fi

@@ -1,5 +1,6 @@
-import pytest
 import time
+
+import pytest
 
 from formflow.config import AppSettings, ColorsConfig, SmbConfig
 
@@ -7,10 +8,11 @@ from formflow.config import AppSettings, ColorsConfig, SmbConfig
 def test_sanitize_for_filename(engine):
     """Tests the filename sanitization logic."""
     assert engine._sanitize_for_filename("Simple Name") == "Simple_Name"
-    assert engine._sanitize_for_filename("With/Special\\Chars:?*\"<>|") == "WithSpecialChars"
+    assert engine._sanitize_for_filename('With/Special\\Chars:?*"<>|') == "WithSpecialChars"
     assert engine._sanitize_for_filename("Umlaute-ÄÖÜ-ß") == "Umlaute--"
     assert engine._sanitize_for_filename(" leading and trailing ") == "_leading_and_trailing_"
     assert engine._sanitize_for_filename("file_name-123_ok") == "file_name-123_ok"
+
 
 def test_generate_filename_parts(engine, monkeypatch):
     """Tests the logic for generating filename parts from form data."""
@@ -26,12 +28,13 @@ def test_generate_filename_parts(engine, monkeypatch):
         "user_name": "Max Mustermann",
         "department": "IT/Support",
         "asset_tag": "LAPTOP-123",
-        "empty_field": ""
+        "empty_field": "",
     }
 
     # Mock datetime.now() to have a predictable timestamp
-    import formflow.services.form_engine as fe_module
     from datetime import datetime as real_datetime
+
+    import formflow.services.form_engine as fe_module
 
     class FakeDatetime(real_datetime):
         @classmethod
@@ -44,6 +47,7 @@ def test_generate_filename_parts(engine, monkeypatch):
 
     # Expected: ['2026-01-30_08-00', 'my-form', 'Max_Mustermann', 'ITSupport']
     assert parts == ["2026-01-30_08-00", "my-form", "Max_Mustermann", "ITSupport"]
+
 
 def test_store_pdf_locally(engine, mocker, tmp_path):
     """Tests that the PDF is stored locally when SMB is disabled."""
@@ -64,6 +68,7 @@ def test_store_pdf_locally(engine, mocker, tmp_path):
     assert result["stored_via"] == "local"
     assert result["filename"] == "final.pdf"
 
+
 def test_store_pdf_smb_success(engine, mocker, tmp_path):
     """Tests a successful PDF upload to an SMB share."""
     # Create a dummy temp file
@@ -82,7 +87,7 @@ def test_store_pdf_smb_success(engine, mocker, tmp_path):
         share="pdfs",
         folder="forms",
         username="testuser",
-        password="testpass"
+        password="testpass",
     )
     engine.config = AppSettings(smb=smb_config).model_dump()
 
@@ -94,13 +99,14 @@ def test_store_pdf_smb_success(engine, mocker, tmp_path):
 
     # Assert that the file was opened on the SMB share with the correct path
     expected_path = r"\\smb-server\pdfs\forms\notebook_handover_test-user_12345.pdf"
-    mock_smb_open.assert_called_once_with(expected_path, mode='wb')
+    mock_smb_open.assert_called_once_with(expected_path, mode="wb")
 
     # Assert that content was written
     handle = m()
     handle.write.assert_called_once_with(b"PDF content")
 
     assert result["stored_via"] == "smb"
+
 
 def test_store_pdf_smb_missing_config_raises_error(engine):
     """
@@ -111,6 +117,7 @@ def test_store_pdf_smb_missing_config_raises_error(engine):
 
     with pytest.raises(RuntimeError, match="SMB ist aktiviert, aber Zugangsdaten/Pfade fehlen."):
         engine._store_pdf("/dummy/path.pdf", "", [])
+
 
 def test_store_pdf_smb_fallback_on_connection_error(engine, mocker, tmp_path):
     """Tests that a failed SMB upload falls back to local storage with a warning."""
@@ -127,7 +134,7 @@ def test_store_pdf_smb_fallback_on_connection_error(engine, mocker, tmp_path):
         share="pdfs",
         folder="forms",
         username="testuser",
-        password="testpass"
+        password="testpass",
     )
     engine.config = AppSettings(smb=smb_config).model_dump()
 
@@ -138,6 +145,7 @@ def test_store_pdf_smb_fallback_on_connection_error(engine, mocker, tmp_path):
     assert "warning" in result
     assert "SMB-Server" in result["warning"]
     assert "fallback.pdf" in result["warning"]
+
 
 def test_cleanup_temp_files_removes_old_files(engine, tmp_path, monkeypatch):
     """Tests that _cleanup_temp_files removes temp files older than the threshold."""
@@ -163,6 +171,7 @@ def test_cleanup_temp_files_removes_old_files(engine, tmp_path, monkeypatch):
     assert recent_file.exists()
     assert non_temp_file.exists()
 
+
 def test_cleanup_temp_files_keeps_young_files(engine, tmp_path, monkeypatch):
     """Tests that _cleanup_temp_files does not remove files newer than the threshold."""
     monkeypatch.chdir(tmp_path)
@@ -180,9 +189,11 @@ def test_cleanup_temp_files_keeps_young_files(engine, tmp_path, monkeypatch):
 
     assert young_file.exists()
 
+
 def test_cleanup_temp_files_handles_oserror(engine, tmp_path, monkeypatch, caplog):
     """Tests that _cleanup_temp_files logs a warning and continues on OSError."""
     import logging
+
     monkeypatch.chdir(tmp_path)
     pdfs_dir = tmp_path / "pdfs"
     pdfs_dir.mkdir()
@@ -193,6 +204,7 @@ def test_cleanup_temp_files_handles_oserror(engine, tmp_path, monkeypatch, caplo
     now = 1000000.0
     monkeypatch.setattr("os.path.getmtime", lambda path: now - 7200)
     monkeypatch.setattr(time, "time", lambda: now)
+
     def raise_oserror(path):
         raise OSError("Permission denied")
 
@@ -202,6 +214,8 @@ def test_cleanup_temp_files_handles_oserror(engine, tmp_path, monkeypatch, caplo
         engine._cleanup_temp_files(max_age_seconds=3600)
 
     assert any("Konnte temp-Datei nicht löschen" in r.message for r in caplog.records)
+
+
 def test_store_pdf_smb_session_reused(engine, mocker, tmp_path):
     """Tests that the SMB session is registered only once across multiple uploads."""
     smb_config = SmbConfig(
@@ -210,7 +224,7 @@ def test_store_pdf_smb_session_reused(engine, mocker, tmp_path):
         share="pdfs",
         folder="",
         username="testuser",
-        password="testpass"
+        password="testpass",
     )
     engine.config = AppSettings(smb=smb_config).model_dump()
 
@@ -226,6 +240,7 @@ def test_store_pdf_smb_session_reused(engine, mocker, tmp_path):
     # register_session should only be called once regardless of upload count
     mock_register.assert_called_once_with("smb-server", username="testuser", password="testpass")
 
+
 def test_store_pdf_smb_reregisters_on_session_expiry(engine, mocker, tmp_path):
     """Tests that an expired session is re-registered once and the upload retried."""
     temp_file = tmp_path / "temp.pdf"
@@ -237,7 +252,7 @@ def test_store_pdf_smb_reregisters_on_session_expiry(engine, mocker, tmp_path):
         share="pdfs",
         folder="",
         username="testuser",
-        password="testpass"
+        password="testpass",
     )
     engine.config = AppSettings(smb=smb_config).model_dump()
 
@@ -247,10 +262,7 @@ def test_store_pdf_smb_reregisters_on_session_expiry(engine, mocker, tmp_path):
     mock_register = mocker.patch("smbclient.register_session")
     m = mocker.mock_open()
     # First open_file call raises (simulating expired session), second succeeds
-    mock_smb_open = mocker.patch(
-        "smbclient.open_file",
-        side_effect=[OSError("Session expired"), m.return_value]
-    )
+    mocker.patch("smbclient.open_file", side_effect=[OSError("Session expired"), m.return_value])
     m.return_value.__enter__ = lambda s: s
     m.return_value.__exit__ = mocker.Mock(return_value=False)
     m.return_value.write = mocker.Mock()
@@ -264,6 +276,7 @@ def test_store_pdf_smb_reregisters_on_session_expiry(engine, mocker, tmp_path):
     assert engine._smb_session_registered is True
     assert result["stored_via"] == "smb"
 
+
 def test_store_pdf_smb_flag_reset_on_fallback(engine, mocker, tmp_path):
     """Tests that _smb_session_registered is reset to False after a failed upload."""
     temp_file = tmp_path / "temp.pdf"
@@ -275,7 +288,7 @@ def test_store_pdf_smb_flag_reset_on_fallback(engine, mocker, tmp_path):
         share="pdfs",
         folder="",
         username="testuser",
-        password="testpass"
+        password="testpass",
     )
     engine.config = AppSettings(smb=smb_config).model_dump()
 
@@ -287,6 +300,7 @@ def test_store_pdf_smb_flag_reset_on_fallback(engine, mocker, tmp_path):
 
     # Flag should remain False so the next call re-attempts registration
     assert engine._smb_session_registered is False
+
 
 def test_colors_config_includes_bg_gray():
     """Tests that ColorsConfig includes the bg_gray field used by templates."""
