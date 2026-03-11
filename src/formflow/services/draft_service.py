@@ -90,20 +90,6 @@ def list_drafts(drafts_dir: str, forms: dict) -> list:
     return drafts
 
 
-def update_draft(drafts_dir: str, draft_id: str, form_id: str, form_data: dict) -> str:
-    """Aktualisiert einen bestehenden Entwurf. Gibt die draft_id zurück."""
-    draft = {
-        "draft_id": draft_id,
-        "form_id": form_id,
-        "saved_at": datetime.now(timezone.utc).isoformat(),
-        "form_data": form_data,
-    }
-    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(draft, f, ensure_ascii=False)
-    return draft_id
-
-
 def delete_draft(drafts_dir: str, draft_id: str) -> None:
     """Löscht eine Entwurfs-Datei."""
     path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
