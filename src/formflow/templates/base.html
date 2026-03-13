@@ -30,13 +30,31 @@
         }
         
         .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: #fff !important;
         }
-        
-        .btn-primary:hover {
-            filter: brightness(90%);
-            border-color: var(--primary-color);
+
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: #fff !important;
+            filter: brightness(85%) !important;
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        .btn-outline-primary:hover,
+        .btn-outline-primary:focus,
+        .btn-outline-primary:active {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: #fff !important;
         }
         
         .card {
