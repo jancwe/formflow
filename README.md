@@ -59,6 +59,32 @@ docker-compose pull && docker-compose up -d
 
 > **Automatische Updates mit Podman:** Das Container-Label `io.containers.autoupdate=registry` ist gesetzt. Mit `podman auto-update` werden neue Image-Versionen aus der Registry automatisch erkannt und eingespielt.
 
+### Deployment auf Railway / PaaS (Single-Volume)
+
+PaaS-Plattformen wie [Railway](https://railway.app/) erlauben nur das Einbinden eines einzelnen Volumes. Mit der optionalen Umgebungsvariable `APP_DATA_DIR` kann formflow so konfiguriert werden, dass alle benutzerspezifischen Daten aus einem einzigen Verzeichnis geladen werden.
+
+**Verzeichnisstruktur im gemounteten Volume (z. B. `/data`):**
+
+```
+/data/
+├── forms/               ← YAML-Formulardefinitionen
+├── pdf_templates/       ← optionale eigene PDF-Templates (falls vorhanden)
+└── logo.png             ← optionales Firmenlogo (gemäß APP_COMPANY__LOGO_FILENAME)
+```
+
+**Schritte für Railway:**
+
+1. Erstelle ein Volume und mounte es auf `/data`.
+2. Setze die folgenden Umgebungsvariablen in Railway:
+   ```ini
+   APP_DATA_DIR=/data
+   APP_COMPANY__LOGO_FILENAME=logo.png   # falls ein eigenes Logo verwendet wird
+   ```
+3. Lege deine Formulare als `*.yaml`-Dateien unter `/data/forms/` ab.
+4. Optional: Lege dein Logo unter `/data/logo.png` ab (wird beim Start automatisch nach `/app/static/logo.png` kopiert).
+
+> **Hinweis:** Die bestehende `docker-compose.yml` für On-Prem-Deployments bleibt vollständig unverändert und funktioniert weiterhin mit den einzelnen Volume-Mounts (`./forms:/app/forms` usw.). `APP_DATA_DIR` muss dort **nicht** gesetzt werden.
+
 ### Entwicklungsumgebung (mit SMB-Testserver)
 
 Für die lokale Entwicklung gibt es eine `docker-compose.dev.yml`-Datei. Diese startet zusätzlich einen Samba-Testserver, um den PDF-Upload auf einen SMB-Share zu simulieren.
