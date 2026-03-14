@@ -30,27 +30,30 @@ def create_app():
     forms_dir = 'forms'
     pdf_templates_dir = None
 
-    data_dir = settings.data_dir
-    if data_dir:
-        forms_dir = os.path.join(data_dir, 'forms')
+    if os.path.isdir('/data/forms'):
+        try:
+            forms_files = os.listdir('/data/forms')
+        except OSError:
+            forms_files = []
+        if any(f.endswith('.yaml') or f.endswith('.yml') for f in forms_files):
+            forms_dir = '/data/forms'
 
-        candidate_pdf_templates = os.path.join(data_dir, 'pdf_templates')
-        if os.path.isdir(candidate_pdf_templates):
-            pdf_templates_dir = candidate_pdf_templates
+    if os.path.isdir('/data/pdf_templates'):
+        pdf_templates_dir = '/data/pdf_templates'
 
-        logo_filename = settings.company.logo_filename
-        if logo_filename:
-            src_logo = os.path.join(data_dir, logo_filename)
-            dst_logo = os.path.join(app.static_folder, logo_filename)
-            if os.path.isfile(src_logo):
-                try:
-                    os.makedirs(os.path.dirname(dst_logo), exist_ok=True)
-                    shutil.copy2(src_logo, dst_logo)
-                    logger.info("Logo kopiert: %s → %s", src_logo, dst_logo)
-                except OSError:
-                    logger.warning("Logo konnte nicht kopiert werden: %s → %s", src_logo, dst_logo, exc_info=True)
-            else:
-                logger.debug("Kein Logo gefunden unter %s, Standardlogo wird verwendet.", src_logo)
+    logo_filename = settings.company.logo_filename
+    if logo_filename:
+        src_logo = os.path.join('/data', logo_filename)
+        dst_logo = os.path.join(app.static_folder, logo_filename)
+        if os.path.isfile(src_logo):
+            try:
+                os.makedirs(os.path.dirname(dst_logo), exist_ok=True)
+                shutil.copy2(src_logo, dst_logo)
+                logger.info("Logo kopiert: %s → %s", src_logo, dst_logo)
+            except OSError:
+                logger.warning("Logo konnte nicht kopiert werden: %s → %s", src_logo, dst_logo, exc_info=True)
+        else:
+            logger.debug("Kein Logo gefunden unter %s, Standardlogo wird verwendet.", src_logo)
 
     # Formular-Engine initialisieren und Konfiguration übergeben
     form_engine = FormEngine(forms_dir=forms_dir, pdf_templates_dir=pdf_templates_dir)
