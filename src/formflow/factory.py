@@ -39,7 +39,12 @@ def create_app():
             forms_dir = '/data/forms'
 
     if os.path.isdir('/data/pdf_templates'):
-        pdf_templates_dir = '/data/pdf_templates'
+        try:
+            tmpl_files = os.listdir('/data/pdf_templates')
+        except OSError:
+            tmpl_files = []
+        if any(f.endswith('.html') for f in tmpl_files):
+            pdf_templates_dir = '/data/pdf_templates'
 
     logo_filename = settings.company.logo_filename
     if logo_filename:
