@@ -16,11 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 class FormEngine:
-    def __init__(self, forms_dir: str = 'forms', config: Optional[Dict[str, Any]] = None):
+    def __init__(self, forms_dir: str = 'forms', config: Optional[Dict[str, Any]] = None, pdf_templates_dir: Optional[str] = None):
         self.forms_dir = forms_dir
         self._config = config
         self.forms: Dict[str, Any] = {}
-        self.pdf_generator = PdfGenerator()
+        self.pdf_generator = PdfGenerator(
+            templates_dir=pdf_templates_dir
+        ) if pdf_templates_dir is not None else PdfGenerator()
         self._storage = PdfStorage()
         self._load_forms()
 
