@@ -61,9 +61,9 @@ docker-compose pull && docker-compose up -d
 
 ### Deployment auf Railway / PaaS (Single-Volume)
 
-PaaS-Plattformen wie [Railway](https://railway.app/) erlauben nur das Einbinden eines einzelnen Volumes. Mit der optionalen Umgebungsvariable `APP_DATA_DIR` kann formflow so konfiguriert werden, dass alle benutzerspezifischen Daten aus einem einzigen Verzeichnis geladen werden.
+PaaS-Plattformen wie [Railway](https://railway.app/) erlauben nur das Einbinden eines einzelnen Volumes. formflow erkennt automatisch, ob ein Volume unter `/data` eingebunden ist – keine zusätzliche Umgebungsvariable nötig.
 
-**Verzeichnisstruktur im gemounteten Volume (z. B. `/data`):**
+**Verzeichnisstruktur im gemounteten Volume:**
 
 ```
 /data/
@@ -75,15 +75,12 @@ PaaS-Plattformen wie [Railway](https://railway.app/) erlauben nur das Einbinden 
 **Schritte für Railway:**
 
 1. Erstelle ein Volume und mounte es auf `/data`.
-2. Setze die folgenden Umgebungsvariablen in Railway:
-   ```ini
-   APP_DATA_DIR=/data
-   APP_COMPANY__LOGO_FILENAME=logo.png   # falls ein eigenes Logo verwendet wird
-   ```
-3. Lege deine Formulare als `*.yaml`-Dateien unter `/data/forms/` ab.
-4. Optional: Lege dein Logo unter `/data/logo.png` ab (wird beim Start automatisch nach `/app/static/logo.png` kopiert).
+2. Lege deine Formulare als `*.yaml`-Dateien unter `/data/forms/` ab.
+3. Optional: Setze `APP_COMPANY__LOGO_FILENAME=logo.png` und lege dein Logo unter `/data/logo.png` ab (wird beim Start automatisch nach `/app/static/logo.png` kopiert).
 
-> **Hinweis:** Die bestehende `docker-compose.yml` für On-Prem-Deployments bleibt vollständig unverändert und funktioniert weiterhin mit den einzelnen Volume-Mounts (`./forms:/app/forms` usw.). `APP_DATA_DIR` muss dort **nicht** gesetzt werden.
+formflow erkennt `/data/forms` beim Start automatisch – sobald dort YAML-Dateien liegen, werden sie verwendet.
+
+> **Hinweis:** Die bestehende `docker-compose.yml` für On-Prem-Deployments bleibt vollständig unverändert und funktioniert weiterhin mit den einzelnen Volume-Mounts (`./forms:/app/forms` usw.).
 
 ### Entwicklungsumgebung (mit SMB-Testserver)
 

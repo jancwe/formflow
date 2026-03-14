@@ -26,7 +26,7 @@ COPY . .
 # der von Flask als static_folder verwendet wird.
 RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/
 
-# Pre-create the /data directory structure used by APP_DATA_DIR (e.g. on Railway)
+# Pre-create the /data directory structure (detected automatically at startup, e.g. on Railway)
 RUN mkdir -p /data/forms /data/pdf_templates
 
 EXPOSE 5000
