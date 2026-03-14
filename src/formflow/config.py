@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -38,4 +37,3 @@ class AppSettings(BaseSettings):
     company: CompanyConfig = Field(default_factory=CompanyConfig)
     colors: ColorsConfig = Field(default_factory=ColorsConfig)
     smb: SmbConfig = Field(default_factory=SmbConfig)
-    data_dir: Optional[str] = None
