@@ -1,12 +1,12 @@
 FROM python:3.14-slim
 
-LABEL org.opencontainers.image.version="0.1.0"
-LABEL org.opencontainers.image.title="formflow"
-LABEL org.opencontainers.image.description="Dynamischer Formular- & PDF-Generator"
+LABEL org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.title="formflow" \
+      org.opencontainers.image.description="Dynamischer Formular- & PDF-Generator"
 
 WORKDIR /app
 
-# Installiere Systemabhängigkeiten für WeasyPrint (Pango, Cairo, etc.)
+# 1) System-Deps (ändert sich sehr selten)
 RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
@@ -16,18 +16,26 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# 2) Python-Deps NUR bei pyproject.toml-Änderung
+#    Trick: Nur pyproject.toml kopieren + Dummy-Package,
+#    damit pip install die Dependencies cached.
 COPY pyproject.toml .
+RUN mkdir -p src/formflow && \
+    echo '__version__ = "0.1.0"' > src/formflow/__init__.py && \
+    pip install --no-cache-dir . && \
+    rm -rf src/formflow
+
+# 3) Anwendungscode (ändert sich häufig)
 COPY src/ src/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --no-deps .
 
-COPY . .
+# 4) Restliche Dateien (app.py, forms/, etc.)
+COPY app.py .
+COPY forms/ forms/
 
-# Statische Dateien (CSS, JS, Standard-Logo) in den festen static-Pfad kopieren,
-# der von Flask als static_folder verwendet wird.
-RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/
-
-# Pre-create the /data directory structure (detected automatically at startup, e.g. on Railway)
-RUN mkdir -p /data/forms /data/pdf_templates
+# 5) Statische Dateien + Verzeichnisse
+RUN mkdir -p /app/static /data/forms /data/pdf_templates && \
+    cp -r src/formflow/static/. /app/static/
 
 EXPOSE 5000
 
