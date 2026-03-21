@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.description="Dynamischer Formular- & PDF-Generato
 
 WORKDIR /app
 
-# Installiere Systemabhängigkeiten für WeasyPrint (Pango, Cairo, etc.)
+# Layer 1: Systemabhängigkeiten für WeasyPrint (Pango, Cairo, etc.) – ändert sich quasi nie
 RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
@@ -16,11 +16,20 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml .
-COPY src/ src/
-RUN pip install --no-cache-dir .
+# Layer 2: Python-Dependencies – ändert sich nur bei Dependency-Updates
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Layer 3: Anwendungscode – ändert sich häufig, aber nur dieser Layer wird invalidiert
+COPY src/ src/
+COPY app.py .
+COPY forms/ forms/
+
+ENV PYTHONPATH=/app/src
+
+RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/
+
+RUN mkdir -p /data/forms /data/pdf_templates
 
 # Statische Dateien (CSS, JS, Standard-Logo) in den festen static-Pfad kopieren,
 # der von Flask als static_folder verwendet wird.
