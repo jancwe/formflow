@@ -96,6 +96,7 @@
         </form>
 
         <form id="draftForm" action="/draft/{{ form.form_id }}" method="POST" class="mt-2">
+            <input type="hidden" name="draft_id" value="{{ draft_id | default('') }}">
             <button type="submit" class="btn btn-outline-secondary w-100">Als Entwurf speichern</button>
         </form>
     </div>
