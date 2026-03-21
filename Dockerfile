@@ -17,11 +17,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 2) Python-Deps NUR bei pyproject.toml-Änderung
-#    Trick: Nur pyproject.toml kopieren + Dummy-Package,
-#    damit pip install die Dependencies cached.
+#    Trick: Nur pyproject.toml kopieren + Dummy-Package mit leeren
+#    Verzeichnissen für package-data Globs, damit pip install die
+#    Dependencies cached.
 COPY pyproject.toml .
-RUN mkdir -p src/formflow && \
+RUN mkdir -p src/formflow/pdf_templates src/formflow/templates src/formflow/static && \
     echo '__version__ = "0.1.0"' > src/formflow/__init__.py && \
+    echo '__version__ = "0.1.0"' > src/formflow/_version.py && \
     pip install --no-cache-dir . && \
     rm -rf src/formflow
 
