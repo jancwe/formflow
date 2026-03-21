@@ -1,8 +1,8 @@
 FROM python:3.14-slim
 
-LABEL org.opencontainers.image.version="0.1.0"
-LABEL org.opencontainers.image.title="formflow"
-LABEL org.opencontainers.image.description="Dynamischer Formular- & PDF-Generator"
+LABEL org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.title="formflow" \
+      org.opencontainers.image.description="Dynamischer Formular- & PDF-Generator"
 
 WORKDIR /app
 
@@ -27,16 +27,11 @@ COPY forms/ forms/
 
 ENV PYTHONPATH=/app/src
 
-RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/
+RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/ && mkdir -p /data/forms /data/pdf_templates
 
-RUN mkdir -p /data/forms /data/pdf_templates
-
-# Statische Dateien (CSS, JS, Standard-Logo) in den festen static-Pfad kopieren,
-# der von Flask als static_folder verwendet wird.
-RUN mkdir -p /app/static && cp -r src/formflow/static/. /app/static/
-
-# Pre-create the /data directory structure (detected automatically at startup, e.g. on Railway)
-RUN mkdir -p /data/forms /data/pdf_templates
+# 5) Statische Dateien + Verzeichnisse
+RUN mkdir -p /app/static /data/forms /data/pdf_templates && \
+    cp -r src/formflow/static/. /app/static/
 
 EXPOSE 5000
 
