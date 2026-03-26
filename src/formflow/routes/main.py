@@ -81,9 +81,9 @@ def register_routes(app: Flask, engine) -> None:
         # Entwurf automatisch speichern/aktualisieren
         draft_id = request.form.get('draft_id', '')
         if draft_id:
-            update_draft('drafts', draft_id, form_id, form_data)
+            update_draft('drafts', draft_id, form_id, form_data, form_def)
         else:
-            draft_id = save_draft('drafts', form_id, form_data)
+            draft_id = save_draft('drafts', form_id, form_data, form_def)
 
         # PDF generieren
         file_id = uuid.uuid4().hex
@@ -160,9 +160,9 @@ def register_routes(app: Flask, engine) -> None:
         form_data = collect_form_data(form_def, request.form)
         draft_id = request.form.get('draft_id', '')
         if draft_id:
-            update_draft('drafts', draft_id, form_id, form_data)
+            update_draft('drafts', draft_id, form_id, form_data, form_def)
         else:
-            save_draft('drafts', form_id, form_data)
+            save_draft('drafts', form_id, form_data, form_def)
         return redirect(url_for('main.list_forms'))
 
     @bp.route('/draft/<form_id>/<draft_id>/load', methods=['GET'])
