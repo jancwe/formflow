@@ -4,7 +4,7 @@ import time
 import pytest
 from werkzeug.datastructures import MultiDict
 
-from formflow.services.draft_service import collect_form_data, save_draft, load_draft, list_drafts, delete_draft, update_draft
+from formflow.services.draft_service import collect_form_data, save_draft, load_draft, list_drafts, delete_draft, update_draft, _build_draft_subtitle
 
 
 @pytest.fixture
@@ -351,3 +351,127 @@ def test_update_draft_creates_file_if_not_exists(drafts_dir):
         data = json.load(f)
     assert data["draft_id"] == "brand_new_id"
     assert data["form_data"]["key"] == "value"
+
+
+# ---------------------------------------------------------------------------
+# _build_draft_subtitle
+# ---------------------------------------------------------------------------
+
+def test_build_draft_subtitle_returns_joined_values():
+    """_build_draft_subtitle joins in_draft_title field values with ', '."""
+    form_def = {
+        "fields": [
+            {"name": "user", "in_draft_title": True},
+            {"name": "notebook", "in_draft_title": True},
+            {"name": "service_tag"},
+        ]
+    }
+    result = _build_draft_subtitle(form_def, {"user": "Max", "notebook": "ThinkPad", "service_tag": "X1"})
+    assert result == "Max, ThinkPad"
+
+
+def test_build_draft_subtitle_skips_empty_values():
+    """_build_draft_subtitle skips fields whose value is empty or missing."""
+    form_def = {"fields": [{"name": "a", "in_draft_title": True}, {"name": "b", "in_draft_title": True}]}
+    assert _build_draft_subtitle(form_def, {"a": "Hello", "b": ""}) == "Hello"
+
+
+def test_build_draft_subtitle_handles_list_values():
+    """_build_draft_subtitle joins list values with ', '."""
+    form_def = {"fields": [{"name": "items", "in_draft_title": True}]}
+    assert _build_draft_subtitle(form_def, {"items": ["A", "B"]}) == "A, B"
+
+
+def test_build_draft_subtitle_empty_when_no_in_draft_title_fields():
+    """_build_draft_subtitle returns '' when no field has in_draft_title: true."""
+    form_def = {"fields": [{"name": "x"}, {"name": "y"}]}
+    assert _build_draft_subtitle(form_def, {"x": "foo", "y": "bar"}) == ""
+
+
+# ---------------------------------------------------------------------------
+# draft_subtitle / form_title persisted in JSON
+# ---------------------------------------------------------------------------
+
+def test_save_draft_persists_draft_subtitle(drafts_dir):
+    """save_draft stores draft_subtitle in the JSON when form_def is provided."""
+    form_def = {
+        "title": "My Form",
+        "fields": [{"name": "user", "in_draft_title": True}],
+    }
+    draft_id = save_draft(drafts_dir, "my_form", {"user": "Erika"}, form_def)
+
+    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert data["draft_subtitle"] == "Erika"
+    assert data["form_title"] == "My Form"
+
+
+def test_save_draft_without_form_def_omits_subtitle(drafts_dir):
+    """save_draft does not add draft_subtitle when form_def is not provided."""
+    draft_id = save_draft(drafts_dir, "my_form", {"user": "Erika"})
+
+    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert "draft_subtitle" not in data
+    assert "form_title" not in data
+
+
+def test_update_draft_persists_draft_subtitle(drafts_dir):
+    """update_draft stores draft_subtitle in the JSON when form_def is provided."""
+    form_def = {
+        "title": "Updated Form",
+        "fields": [{"name": "device", "in_draft_title": True}],
+    }
+    draft_id = save_draft(drafts_dir, "my_form", {"device": "old"})
+    update_draft(drafts_dir, draft_id, "my_form", {"device": "ThinkPad"}, form_def)
+
+    path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert data["draft_subtitle"] == "ThinkPad"
+    assert data["form_title"] == "Updated Form"
+
+
+def test_list_drafts_uses_persisted_draft_subtitle(drafts_dir):
+    """list_drafts reads draft_subtitle from the JSON (not from forms dict)."""
+    form_def = {
+        "title": "Übergabe",
+        "fields": [{"name": "user", "in_draft_title": True}],
+    }
+    save_draft(drafts_dir, "handover", {"user": "Max"}, form_def)
+
+    # Pass an empty forms dict – subtitle must still come from persisted value
+    drafts = list_drafts(drafts_dir, {})
+
+    assert drafts[0]["draft_subtitle"] == "Max"
+    assert drafts[0]["form_title"] == "Übergabe"
+
+
+def test_list_drafts_falls_back_for_old_drafts_without_persisted_subtitle(drafts_dir):
+    """list_drafts falls back to runtime calculation for old drafts without draft_subtitle."""
+    forms = {
+        "legacy_form": {
+            "title": "Legacy",
+            "fields": [{"name": "user", "in_draft_title": True}],
+        }
+    }
+    # Write a draft JSON without draft_subtitle (simulates old format)
+    old_draft = {
+        "draft_id": "old123",
+        "form_id": "legacy_form",
+        "saved_at": "2024-01-01T00:00:00+00:00",
+        "form_data": {"user": "OldUser"},
+    }
+    path = os.path.join(drafts_dir, "draft_old123.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(old_draft, f)
+
+    drafts = list_drafts(drafts_dir, forms)
+
+    assert drafts[0]["draft_subtitle"] == "OldUser"
+    assert drafts[0]["form_title"] == "Legacy"

@@ -25,20 +25,39 @@ def collect_form_data(form_def: Dict[str, Any], request_form: MultiDict) -> Dict
     return form_data
 
 
-def save_draft(drafts_dir: str, form_id: str, form_data: dict) -> str:
+def _build_draft_subtitle(form_def: Dict[str, Any], form_data: dict) -> str:
+    """Berechnet den Draft-Subtitle aus Feldern mit in_draft_title: true."""
+    subtitle_parts = []
+    for field in form_def.get('fields', []):
+        if not field.get('in_draft_title'):
+            continue
+        value = form_data.get(field['name'])
+        if not value:
+            continue
+        if isinstance(value, list):
+            subtitle_parts.append(", ".join(value))
+        else:
+            subtitle_parts.append(value)
+    return ", ".join(subtitle_parts)
+
+
+def save_draft(drafts_dir: str, form_id: str, form_data: dict, form_def: Dict[str, Any] = None) -> str:
     """Speichert einen neuen Entwurf als JSON und gibt die draft_id zurück."""
     draft_id = uuid.uuid4().hex
-    return update_draft(drafts_dir, draft_id, form_id, form_data)
+    return update_draft(drafts_dir, draft_id, form_id, form_data, form_def)
 
 
-def update_draft(drafts_dir: str, draft_id: str, form_id: str, form_data: dict) -> str:
+def update_draft(drafts_dir: str, draft_id: str, form_id: str, form_data: dict, form_def: Dict[str, Any] = None) -> str:
     """Aktualisiert einen bestehenden Entwurf. Gibt die draft_id zurück."""
-    draft = {
+    draft: Dict[str, Any] = {
         "draft_id": draft_id,
         "form_id": form_id,
         "saved_at": datetime.now(timezone.utc).isoformat(),
         "form_data": form_data,
     }
+    if form_def is not None:
+        draft["form_title"] = form_def.get('title', form_id)
+        draft["draft_subtitle"] = _build_draft_subtitle(form_def, form_data)
     path = os.path.join(drafts_dir, f"draft_{draft_id}.json")
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(draft, f, ensure_ascii=False)
@@ -65,23 +84,20 @@ def list_drafts(drafts_dir: str, forms: dict) -> list:
             with open(path, 'r', encoding='utf-8') as f:
                 draft = json.load(f)
             form_def = forms.get(draft.get('form_id'), {})
-            form_data = draft.get('form_data', {})
-            subtitle_parts = []
-            for field in form_def.get('fields', []):
-                if not field.get('in_draft_title'):
-                    continue
-                value = form_data.get(field['name'])
-                if not value:
-                    continue
-                if isinstance(value, list):
-                    subtitle_parts.append(", ".join(value))
-                else:
-                    subtitle_parts.append(value)
+            # Use persisted values when available; fall back to runtime calculation for old drafts
+            if 'draft_subtitle' in draft:
+                draft_subtitle = draft['draft_subtitle']
+            else:
+                draft_subtitle = _build_draft_subtitle(form_def, draft.get('form_data', {}))
+            if 'form_title' in draft:
+                form_title = draft['form_title']
+            else:
+                form_title = form_def.get('title', draft.get('form_id', ''))
             drafts.append({
                 "draft_id": draft.get('draft_id'),
                 "form_id": draft.get('form_id'),
-                "form_title": form_def.get('title', draft.get('form_id', '')),
-                "draft_subtitle": ", ".join(subtitle_parts),
+                "form_title": form_title,
+                "draft_subtitle": draft_subtitle,
                 "saved_at": draft.get('saved_at'),
             })
         except (OSError, json.JSONDecodeError) as e:
